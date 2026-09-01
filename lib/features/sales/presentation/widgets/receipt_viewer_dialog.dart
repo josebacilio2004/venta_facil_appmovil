@@ -690,10 +690,10 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
           '💳 Medio de Pago: ${receipt.paymentMethod.toUpperCase()}\n\n'
           '_Comprobante emitido por Sistema Fintech VentaFácil_';
 
-      await SharePlus.instance.share(
-        shareText,
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: shareText,
         subject: 'Comprobante de Venta ${receipt.seriesNumber}',
-        files: [XFile(file.path)],
       );
     } catch (e) {
       messenger.showSnackBar(
