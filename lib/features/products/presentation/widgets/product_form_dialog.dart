@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../domain/entities/product.dart';
 import '../providers/products_providers.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/local_image_helper.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
@@ -26,6 +28,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _minStockController;
   late TextEditingController _skuController;
   
+  String? _imagePath;
   int? _selectedCategoryId;
   bool _isActive = true;
   bool _isSaving = false;
@@ -41,6 +44,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _stockController = TextEditingController(text: p != null ? p.stock.toString() : '0');
     _minStockController = TextEditingController(text: p != null ? p.minStock.toString() : '5');
     _skuController = TextEditingController(text: p?.sku ?? widget.initialSku ?? '');
+    _imagePath = p?.imagePath;
     _selectedCategoryId = p?.categoryId;
     _isActive = p?.isActive ?? true;
   }
@@ -91,7 +95,67 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Image Picker Section
+              Center(
+                child: GestureDetector(
+                  onTap: _showImagePickerOptions,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.outlineVariantColor, width: 1.5),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: _imagePath != null && _imagePath!.isNotEmpty
+                              ? LocalImageHelper.buildProductImage(
+                                  _imagePath,
+                                  width: 110,
+                                  height: 110,
+                                  fit: BoxFit.cover,
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_a_photo_rounded,
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                                      size: 32,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Añadir Foto',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryColor),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      if (_imagePath != null && _imagePath!.isNotEmpty)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _imagePath = null),
+                            child: CircleAvatar(
+                              radius: 12,
+                              backgroundColor: Colors.black.withValues(alpha: 0.6),
+                              child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Nombre del producto *'),
@@ -190,7 +254,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Descripción / Notas (Opcional)'),
+                decoration: const InputDecoration(labelText: 'Descripción / Características (Opcional)'),
                 maxLines: 2,
               ),
               const SizedBox(height: 8),
@@ -226,6 +290,53 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     );
   }
 
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Seleccionar Foto del Producto',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryColor),
+                title: const Text('Tomar Foto con la Cámara', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await LocalImageHelper.pickAndSaveImage(source: ImageSource.camera);
+                  if (path != null) {
+                    setState(() => _imagePath = path);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryColor),
+                title: const Text('Elegir de la Galería', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await LocalImageHelper.pickAndSaveImage(source: ImageSource.gallery);
+                  if (path != null) {
+                    setState(() => _imagePath = path);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _saveProduct(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
@@ -240,6 +351,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         stock: int.parse(_stockController.text.trim()),
         minStock: int.tryParse(_minStockController.text.trim()) ?? 5,
         sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
+        imagePath: _imagePath,
         categoryId: _selectedCategoryId,
         isActive: _isActive,
         createdAt: isEdit ? widget.product!.createdAt : DateTime.now(),
@@ -287,8 +399,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
             onPressed: () async {
               await ref.read(deleteProductUseCaseProvider).call(product.id);
               ref.invalidate(productsListProvider);
-              if (ctx.mounted) Navigator.pop(ctx); // Cierra confirmación
-              if (context.mounted) Navigator.pop(context); // Cierra formulario
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Eliminar'),
           ),

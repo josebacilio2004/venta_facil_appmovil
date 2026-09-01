@@ -55,6 +55,7 @@ class ProductsRepositoryImpl implements ProductsRepository {
       stock: product.stock,
       minStock: product.minStock,
       sku: product.sku,
+      imagePath: product.imagePath,
       isActive: product.isActive,
       createdAt: product.createdAt,
     );
@@ -71,6 +72,7 @@ class ProductsRepositoryImpl implements ProductsRepository {
       stock: Value(product.stock),
       minStock: Value(product.minStock),
       sku: Value(product.sku),
+      imagePath: Value(product.imagePath),
       isActive: Value(product.isActive),
       createdAt: Value(product.createdAt),
     );

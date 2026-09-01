@@ -13,6 +13,9 @@ class SettingsState {
   final String machineSeries;
   final String ticketSeries;
   final String boletaSeries;
+  final String yapeName;
+  final String yapePhone;
+  final String yapeQrPath;
   final String currency;
   final String themeMode;
   final bool isLoading;
@@ -25,6 +28,9 @@ class SettingsState {
     this.machineSeries = 'POS-VF2026-01',
     this.ticketSeries = 'T001',
     this.boletaSeries = 'B001',
+    this.yapeName = 'Comercial VentaFácil',
+    this.yapePhone = '987654321',
+    this.yapeQrPath = '',
     this.currency = 'S/.',
     this.themeMode = 'light',
     this.isLoading = false,
@@ -38,6 +44,9 @@ class SettingsState {
     String? machineSeries,
     String? ticketSeries,
     String? boletaSeries,
+    String? yapeName,
+    String? yapePhone,
+    String? yapeQrPath,
     String? currency,
     String? themeMode,
     bool? isLoading,
@@ -50,6 +59,9 @@ class SettingsState {
       machineSeries: machineSeries ?? this.machineSeries,
       ticketSeries: ticketSeries ?? this.ticketSeries,
       boletaSeries: boletaSeries ?? this.boletaSeries,
+      yapeName: yapeName ?? this.yapeName,
+      yapePhone: yapePhone ?? this.yapePhone,
+      yapeQrPath: yapeQrPath ?? this.yapeQrPath,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       isLoading: isLoading ?? this.isLoading,
@@ -77,6 +89,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       String machineSeries = 'POS-VF2026-01';
       String ticketSeries = 'T001';
       String boletaSeries = 'B001';
+      String yapeName = 'Comercial VentaFácil';
+      String yapePhone = '987654321';
+      String yapeQrPath = '';
       String currency = 'S/.';
       String themeMode = 'light';
 
@@ -88,6 +103,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         if (s.key == 'machine_series') machineSeries = s.value;
         if (s.key == 'ticket_series') ticketSeries = s.value;
         if (s.key == 'boleta_series') boletaSeries = s.value;
+        if (s.key == 'yape_name') yapeName = s.value;
+        if (s.key == 'yape_phone') yapePhone = s.value;
+        if (s.key == 'yape_qr_path') yapeQrPath = s.value;
         if (s.key == 'currency') currency = s.value;
         if (s.key == 'theme_mode') themeMode = s.value;
       }
@@ -100,6 +118,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         machineSeries: machineSeries,
         ticketSeries: ticketSeries,
         boletaSeries: boletaSeries,
+        yapeName: yapeName,
+        yapePhone: yapePhone,
+        yapeQrPath: yapeQrPath,
         currency: currency,
         themeMode: themeMode,
         isLoading: false,
@@ -107,14 +128,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(isLoading: false);
     }
-  }
-
-  Future<void> updateBusinessField(String key, String value) async {
-    state = state.copyWith(isLoading: true);
-    await _db.into(_db.appSettings).insertOnConflictUpdate(
-      AppSetting(key: key, value: value),
-    );
-    await _loadSettings();
   }
 
   Future<void> updateBusinessInfo({
@@ -136,6 +149,22 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         AppSetting(key: 'machine_series', value: machineSeries),
         AppSetting(key: 'ticket_series', value: ticketSeries),
         AppSetting(key: 'boleta_series', value: boletaSeries),
+      ]);
+    });
+    await _loadSettings();
+  }
+
+  Future<void> updateYapeInfo({
+    required String yapeName,
+    required String yapePhone,
+    required String yapeQrPath,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    await _db.batch((batch) {
+      batch.insertAllOnConflictUpdate(_db.appSettings, [
+        AppSetting(key: 'yape_name', value: yapeName),
+        AppSetting(key: 'yape_phone', value: yapePhone),
+        AppSetting(key: 'yape_qr_path', value: yapeQrPath),
       ]);
     });
     await _loadSettings();

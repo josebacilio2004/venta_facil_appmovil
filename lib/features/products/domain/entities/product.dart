@@ -8,6 +8,7 @@ class ProductEntity {
   final int stock;
   final int minStock;
   final String? sku;
+  final String? imagePath;
   final bool isActive;
   final DateTime createdAt;
 
@@ -21,6 +22,7 @@ class ProductEntity {
     required this.stock,
     required this.minStock,
     this.sku,
+    this.imagePath,
     required this.isActive,
     required this.createdAt,
   });
@@ -35,6 +37,7 @@ class ProductEntity {
     int? stock,
     int? minStock,
     String? sku,
+    String? imagePath,
     bool? isActive,
     DateTime? createdAt,
   }) {
@@ -48,12 +51,14 @@ class ProductEntity {
       stock: stock ?? this.stock,
       minStock: minStock ?? this.minStock,
       sku: sku ?? this.sku,
+      imagePath: imagePath ?? this.imagePath,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   double get unitProfit => sellingPrice - purchasePrice;
+  double get profitPercentage => purchasePrice > 0 ? ((sellingPrice - purchasePrice) / purchasePrice) * 100 : 0.0;
   bool get isLowStock => stock <= minStock;
   bool get isOutOfStock => stock <= 0;
 }

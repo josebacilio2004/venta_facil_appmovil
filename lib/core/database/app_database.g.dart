@@ -370,6 +370,17 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _imagePathMeta = const VerificationMeta(
+    'imagePath',
+  );
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+    'image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -408,6 +419,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     stock,
     minStock,
     sku,
+    imagePath,
     isActive,
     createdAt,
   ];
@@ -489,6 +501,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         sku.isAcceptableOrUnknown(data['sku']!, _skuMeta),
       );
     }
+    if (data.containsKey('image_path')) {
+      context.handle(
+        _imagePathMeta,
+        imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
+      );
+    }
     if (data.containsKey('is_active')) {
       context.handle(
         _isActiveMeta,
@@ -546,6 +564,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.string,
         data['${effectivePrefix}sku'],
       ),
+      imagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path'],
+      ),
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -573,6 +595,7 @@ class Product extends DataClass implements Insertable<Product> {
   final int stock;
   final int minStock;
   final String? sku;
+  final String? imagePath;
   final bool isActive;
   final DateTime createdAt;
   const Product({
@@ -585,6 +608,7 @@ class Product extends DataClass implements Insertable<Product> {
     required this.stock,
     required this.minStock,
     this.sku,
+    this.imagePath,
     required this.isActive,
     required this.createdAt,
   });
@@ -606,6 +630,9 @@ class Product extends DataClass implements Insertable<Product> {
     if (!nullToAbsent || sku != null) {
       map['sku'] = Variable<String>(sku);
     }
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -626,6 +653,9 @@ class Product extends DataClass implements Insertable<Product> {
       stock: Value(stock),
       minStock: Value(minStock),
       sku: sku == null && nullToAbsent ? const Value.absent() : Value(sku),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
     );
@@ -646,6 +676,7 @@ class Product extends DataClass implements Insertable<Product> {
       stock: serializer.fromJson<int>(json['stock']),
       minStock: serializer.fromJson<int>(json['minStock']),
       sku: serializer.fromJson<String?>(json['sku']),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -663,6 +694,7 @@ class Product extends DataClass implements Insertable<Product> {
       'stock': serializer.toJson<int>(stock),
       'minStock': serializer.toJson<int>(minStock),
       'sku': serializer.toJson<String?>(sku),
+      'imagePath': serializer.toJson<String?>(imagePath),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -678,6 +710,7 @@ class Product extends DataClass implements Insertable<Product> {
     int? stock,
     int? minStock,
     Value<String?> sku = const Value.absent(),
+    Value<String?> imagePath = const Value.absent(),
     bool? isActive,
     DateTime? createdAt,
   }) => Product(
@@ -690,6 +723,7 @@ class Product extends DataClass implements Insertable<Product> {
     stock: stock ?? this.stock,
     minStock: minStock ?? this.minStock,
     sku: sku.present ? sku.value : this.sku,
+    imagePath: imagePath.present ? imagePath.value : this.imagePath,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -712,6 +746,7 @@ class Product extends DataClass implements Insertable<Product> {
       stock: data.stock.present ? data.stock.value : this.stock,
       minStock: data.minStock.present ? data.minStock.value : this.minStock,
       sku: data.sku.present ? data.sku.value : this.sku,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -729,6 +764,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('stock: $stock, ')
           ..write('minStock: $minStock, ')
           ..write('sku: $sku, ')
+          ..write('imagePath: $imagePath, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -746,6 +782,7 @@ class Product extends DataClass implements Insertable<Product> {
     stock,
     minStock,
     sku,
+    imagePath,
     isActive,
     createdAt,
   );
@@ -762,6 +799,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.stock == this.stock &&
           other.minStock == this.minStock &&
           other.sku == this.sku &&
+          other.imagePath == this.imagePath &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt);
 }
@@ -776,6 +814,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> stock;
   final Value<int> minStock;
   final Value<String?> sku;
+  final Value<String?> imagePath;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
   const ProductsCompanion({
@@ -788,6 +827,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.stock = const Value.absent(),
     this.minStock = const Value.absent(),
     this.sku = const Value.absent(),
+    this.imagePath = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -801,6 +841,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.stock = const Value.absent(),
     this.minStock = const Value.absent(),
     this.sku = const Value.absent(),
+    this.imagePath = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name),
@@ -816,6 +857,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<int>? stock,
     Expression<int>? minStock,
     Expression<String>? sku,
+    Expression<String>? imagePath,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
   }) {
@@ -829,6 +871,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (stock != null) 'stock': stock,
       if (minStock != null) 'min_stock': minStock,
       if (sku != null) 'sku': sku,
+      if (imagePath != null) 'image_path': imagePath,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -844,6 +887,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<int>? stock,
     Value<int>? minStock,
     Value<String?>? sku,
+    Value<String?>? imagePath,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
   }) {
@@ -857,6 +901,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       stock: stock ?? this.stock,
       minStock: minStock ?? this.minStock,
       sku: sku ?? this.sku,
+      imagePath: imagePath ?? this.imagePath,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -892,6 +937,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (sku.present) {
       map['sku'] = Variable<String>(sku.value);
     }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
@@ -913,6 +961,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('stock: $stock, ')
           ..write('minStock: $minStock, ')
           ..write('sku: $sku, ')
+          ..write('imagePath: $imagePath, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -3230,6 +3279,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<int> stock,
       Value<int> minStock,
       Value<String?> sku,
+      Value<String?> imagePath,
       Value<bool> isActive,
       Value<DateTime> createdAt,
     });
@@ -3244,6 +3294,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<int> stock,
       Value<int> minStock,
       Value<String?> sku,
+      Value<String?> imagePath,
       Value<bool> isActive,
       Value<DateTime> createdAt,
     });
@@ -3336,6 +3387,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<String> get sku => $composableBuilder(
     column: $table.sku,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3447,6 +3503,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -3519,6 +3580,9 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<String> get sku =>
       $composableBuilder(column: $table.sku, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -3612,6 +3676,7 @@ class $$ProductsTableTableManager
                 Value<int> stock = const Value.absent(),
                 Value<int> minStock = const Value.absent(),
                 Value<String?> sku = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion(
@@ -3624,6 +3689,7 @@ class $$ProductsTableTableManager
                 stock: stock,
                 minStock: minStock,
                 sku: sku,
+                imagePath: imagePath,
                 isActive: isActive,
                 createdAt: createdAt,
               ),
@@ -3638,6 +3704,7 @@ class $$ProductsTableTableManager
                 Value<int> stock = const Value.absent(),
                 Value<int> minStock = const Value.absent(),
                 Value<String?> sku = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion.insert(
@@ -3650,6 +3717,7 @@ class $$ProductsTableTableManager
                 stock: stock,
                 minStock: minStock,
                 sku: sku,
+                imagePath: imagePath,
                 isActive: isActive,
                 createdAt: createdAt,
               ),

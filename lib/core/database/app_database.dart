@@ -19,6 +19,7 @@ class Products extends Table {
   IntColumn get stock => integer().withDefault(const Constant(0))();
   IntColumn get minStock => integer().withDefault(const Constant(0))();
   TextColumn get sku => text().nullable()();
+  TextColumn get imagePath => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -86,6 +87,9 @@ class AppDatabase extends _$AppDatabase {
           await into(appSettings).insert(AppSettingsCompanion.insert(key: 'business_name', value: 'Mi Negocio'));
           await into(appSettings).insert(AppSettingsCompanion.insert(key: 'currency', value: 'S/.'));
           await into(appSettings).insert(AppSettingsCompanion.insert(key: 'theme_mode', value: 'light'));
+          await into(appSettings).insert(AppSettingsCompanion.insert(key: 'yape_name', value: ''));
+          await into(appSettings).insert(AppSettingsCompanion.insert(key: 'yape_phone', value: ''));
+          await into(appSettings).insert(AppSettingsCompanion.insert(key: 'yape_qr_path', value: ''));
           
           // Categorías predefinidas
           final defaultCategories = ['Abarrotes', 'Bebidas', 'Snacks', 'Limpieza', 'Otros'];
