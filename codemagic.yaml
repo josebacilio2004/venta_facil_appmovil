@@ -1,0 +1,135 @@
+workflows:
+  android-workflow:
+    name: Android Build (APK)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        PACKAGE_NAME: "com.bacsystem.ventafacil"
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    scripts:
+      - name: Set up local properties
+        script: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Run code analyzer
+        script: |
+          flutter analyze --no-fatal-infos
+      - name: Run unit and logic tests
+        script: |
+          flutter test
+      - name: Build Android Release APK
+        script: |
+          flutter build apk --release
+      - name: Build Android App Bundle (AAB)
+        script: |
+          flutter build appbundle --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/mapping.txt
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - josebacilio2004@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  ios-workflow:
+    name: iOS Build (IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Run tests
+        script: |
+          flutter test
+      - name: Build iOS IPA (Unsigned / Release)
+        script: |
+          flutter build ipa --release --no-codesign
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/*.app
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - josebacilio2004@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  full-release-workflow:
+    name: Full Release (APK & IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - tag
+      branch_patterns:
+        - pattern: '*'
+          include: true
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Run tests
+        script: |
+          flutter test
+      - name: Build Android APK Release
+        script: |
+          flutter build apk --release
+      - name: Build iOS IPA Release
+        script: |
+          flutter build ipa --release --no-codesign
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - josebacilio2004@gmail.com
+        notify:
+          success: true
+          failure: true
