@@ -36,6 +36,10 @@ final getSaleItemsUseCaseProvider = Provider<GetSaleItemsUseCase>((ref) {
   return GetSaleItemsUseCase(ref.watch(salesRepositoryProvider));
 });
 
+final deleteSaleUseCaseProvider = Provider<DeleteSaleUseCase>((ref) {
+  return DeleteSaleUseCase(ref.watch(salesRepositoryProvider));
+});
+
 // Sales List Notifier
 class SalesListNotifier extends AsyncNotifier<List<SaleEntity>> {
   @override
@@ -46,6 +50,15 @@ class SalesListNotifier extends AsyncNotifier<List<SaleEntity>> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      return ref.read(getSalesUseCaseProvider).call();
+    });
+  }
+
+  Future<void> voidSale(int saleId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(deleteSaleUseCaseProvider).call(saleId);
+      ref.invalidate(productsListProvider);
       return ref.read(getSalesUseCaseProvider).call();
     });
   }

@@ -31,3 +31,13 @@ class GetSaleItemsUseCase {
     return repository.getSaleItems(saleId);
   }
 }
+
+class DeleteSaleUseCase {
+  final SalesRepository repository;
+
+  DeleteSaleUseCase(this.repository);
+
+  Future<void> call(int saleId) {
+    return repository.deleteSale(saleId);
+  }
+}

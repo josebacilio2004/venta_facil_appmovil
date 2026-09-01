@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
 import '../../../../core/widgets/fintech_card.dart';
 import '../../../products/presentation/providers/products_providers.dart';
 import '../../../products/domain/entities/product.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/receipt_data.dart';
+import '../../domain/entities/sale.dart';
+import '../../domain/entities/sale_item.dart';
 import '../providers/sales_providers.dart';
 import '../widgets/checkout_dialog.dart';
 import '../widgets/receipt_viewer_dialog.dart';
@@ -21,11 +24,14 @@ class SalesPage extends ConsumerStatefulWidget {
 
 class _SalesPageState extends ConsumerState<SalesPage> {
   final _searchController = TextEditingController();
+  final _historySearchController = TextEditingController();
   String _searchQuery = '';
+  String _historyQuery = '';
 
   @override
   void dispose() {
     _searchController.dispose();
+    _historySearchController.dispose();
     super.dispose();
   }
 
@@ -34,9 +40,10 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     final cart = ref.watch(cartProvider);
     final productsFilter = ref.watch(productsFilterProvider);
     final productsAsync = ref.watch(productsListProvider);
+    final salesAsync = ref.watch(salesListProvider);
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
@@ -44,13 +51,13 @@ class _SalesPageState extends ConsumerState<SalesPage> {
           elevation: 0,
           scrolledUnderElevation: 0,
           title: const Text(
-            'Registrar Venta',
+            'Módulo de Ventas',
             style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor, fontSize: 20),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),
-              tooltip: 'Ver Último Ticket / Comprobante',
+              tooltip: 'Ver Último Ticket Emitido',
               onPressed: () => _openLatestReceipt(),
             ),
             const SizedBox(width: 8),
@@ -60,14 +67,15 @@ class _SalesPageState extends ConsumerState<SalesPage> {
             unselectedLabelColor: AppTheme.outlineColor,
             indicatorColor: AppTheme.primaryColor,
             indicatorWeight: 3,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
             tabs: [
-              const Tab(icon: Icon(Icons.search_rounded, size: 20), text: '1. Productos'),
+              const Tab(icon: Icon(Icons.point_of_sale_rounded, size: 18), text: '1. Productos'),
               Tab(
-                icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 18),
                 text: '2. Carrito (${cart.items.fold(0, (sum, i) => sum + i.quantity)})',
               ),
+              const Tab(icon: Icon(Icons.history_rounded, size: 18), text: '3. Historial'),
             ],
           ),
         ),
@@ -82,7 +90,7 @@ class _SalesPageState extends ConsumerState<SalesPage> {
                     controller: _searchController,
                     style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 15),
                     decoration: InputDecoration(
-                      hintText: 'Buscar por nombre o escanear SKU...',
+                      hintText: 'Buscar producto o escanear SKU...',
                       prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.outlineColor, size: 20),
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -152,6 +160,9 @@ class _SalesPageState extends ConsumerState<SalesPage> {
 
             // Tab 2: Resumen del Carrito
             _buildCartTab(context, ref, cart),
+
+            // Tab 3: Historial de Ventas con CRUD Desplegable
+            _buildSalesHistoryTab(context, ref, salesAsync),
           ],
         ),
       ),
@@ -352,6 +363,295 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     );
   }
 
+  Widget _buildSalesHistoryTab(BuildContext context, WidgetRef ref, AsyncValue<List<SaleEntity>> salesAsync) {
+    return Column(
+      children: [
+        // Buscador de Historial
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+          child: TextField(
+            controller: _historySearchController,
+            style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Buscar por N° Venta o Cliente...',
+              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.outlineColor, size: 20),
+              suffixIcon: _historyQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: AppTheme.outlineColor, size: 18),
+                      onPressed: () {
+                        setState(() => _historyQuery = '');
+                        _historySearchController.clear();
+                      },
+                    )
+                  : null,
+            ),
+            onChanged: (val) {
+              setState(() => _historyQuery = val.trim().toLowerCase());
+            },
+          ),
+        ),
+
+        // Listado con CRUD Desplegable
+        Expanded(
+          child: salesAsync.when(
+            data: (sales) {
+              var filteredSales = sales;
+              if (_historyQuery.isNotEmpty) {
+                filteredSales = sales.where((s) {
+                  final idStr = s.id.toString();
+                  final custName = (s.customerName ?? '').toLowerCase();
+                  final pay = s.paymentMethod.toLowerCase();
+                  return idStr.contains(_historyQuery) || custName.contains(_historyQuery) || pay.contains(_historyQuery);
+                }).toList();
+              }
+
+              if (filteredSales.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.receipt_long_outlined, size: 32, color: AppTheme.outlineColor),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'No hay ventas registradas',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Las ventas que realices aparecerán aquí con su detalle.',
+                        style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                color: AppTheme.primaryColor,
+                onRefresh: () async {
+                  ref.invalidate(salesListProvider);
+                },
+                child: ListView.builder(
+                  itemCount: filteredSales.length,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                  itemBuilder: (context, index) {
+                    final sale = filteredSales[index];
+                    return _buildSaleHistoryExpandableCard(context, ref, sale);
+                  },
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+            error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppTheme.errorColor))),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaleHistoryExpandableCard(BuildContext context, WidgetRef ref, SaleEntity sale) {
+    final settings = ref.watch(settingsNotifierProvider);
+    final ticketSeriesNumber = '${settings.ticketSeries}-${sale.id.toString().padLeft(8, '0')}';
+
+    return FintechCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.zero,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor, size: 22),
+          ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Venta #${sale.id.toString().padLeft(4, '0')}',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.onSurfaceColor),
+              ),
+              Text(
+                CurrencyFormatter.format(sale.total),
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primaryColor),
+              ),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 3),
+              Text(
+                '${DateFormatter.formatDateTime(sale.date)} • ${sale.customerName ?? 'Clientes Varios'}',
+                style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppTheme.outlineVariantColor),
+                    ),
+                    child: Text(
+                      ticketSeriesNumber,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryColor),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getPaymentBadgeColor(sale.paymentMethod).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      sale.paymentMethod.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: _getPaymentBadgeColor(sale.paymentMethod),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          children: [
+            const Divider(color: AppTheme.outlineVariantColor, height: 16),
+            
+            // Carga asíncrona de ítems de la venta
+            FutureBuilder<List<SaleItemEntity>>(
+              future: ref.read(getSaleItemsUseCaseProvider).call(sale.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                  );
+                }
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return const Text('Sin detalle de productos', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor));
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PRODUCTOS COMPRADOS:',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceVariantColor, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    ...items.map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item.quantity} x ${item.productName}',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.onSurfaceColor),
+                            ),
+                          ),
+                          Text(
+                            CurrencyFormatter.format(item.subtotal),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+                          ),
+                        ],
+                      ),
+                    )),
+                    if (sale.discount > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Descuento aplicado:', style: TextStyle(fontSize: 12, color: AppTheme.tertiaryColor, fontWeight: FontWeight.w600)),
+                          Text('- ${CurrencyFormatter.format(sale.discount)}', style: const TextStyle(fontSize: 12, color: AppTheme.tertiaryColor, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+
+            const SizedBox(height: 14),
+
+            // Botones de Acción (CRUD)
+            Row(
+              children: [
+                // 1. Ver / Imprimir Comprobante SUNAT
+                Expanded(
+                  flex: 3,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _openSaleReceipt(context, sale),
+                    icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                    label: const Text('Ver Ticket / Boleta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // 2. Anular Venta (Devuelve stock)
+                Expanded(
+                  flex: 2,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.errorColor,
+                      side: const BorderSide(color: AppTheme.errorColor, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _confirmVoidSale(context, ref, sale),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                    label: const Text('Anular', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getPaymentBadgeColor(String method) {
+    switch (method.toLowerCase()) {
+      case 'efectivo':
+        return AppTheme.secondaryColor;
+      case 'yape':
+        return const Color(0xFF8B5CF6);
+      case 'plin':
+        return const Color(0xFF06B6D4);
+      case 'tarjeta':
+        return const Color(0xFFF59E0B);
+      default:
+        return AppTheme.primaryColor;
+    }
+  }
+
   void _openCheckout(BuildContext context) {
     showDialog(
       context: context,
@@ -418,9 +718,12 @@ class _SalesPageState extends ConsumerState<SalesPage> {
       );
       return;
     }
+    if (!mounted) return;
+    _openSaleReceipt(context, sales.first);
+  }
 
-    final latestSale = sales.first;
-    final items = await ref.read(getSaleItemsUseCaseProvider).call(latestSale.id);
+  void _openSaleReceipt(BuildContext context, SaleEntity sale) async {
+    final items = await ref.read(getSaleItemsUseCaseProvider).call(sale.id);
     final settings = ref.read(settingsNotifierProvider);
 
     final snapshotItems = items.map((i) => ReceiptItemData(
@@ -431,37 +734,114 @@ class _SalesPageState extends ConsumerState<SalesPage> {
       unitMeasure: 'UND',
     )).toList();
 
-    final total = latestSale.total;
+    final total = sale.total;
     final taxable = total / 1.18;
     final igv = total - taxable;
 
     final receipt = ReceiptData(
-      saleId: latestSale.id,
+      saleId: sale.id,
       documentType: DocumentType.ticket,
-      seriesNumber: '${settings.ticketSeries}-${latestSale.id.toString().padLeft(8, '0')}',
+      seriesNumber: '${settings.ticketSeries}-${sale.id.toString().padLeft(8, '0')}',
       machineSeries: settings.machineSeries,
-      emissionDate: latestSale.date,
+      emissionDate: sale.date,
       issuerName: settings.businessName,
       issuerRuc: settings.ruc,
       issuerAddress: settings.address,
       issuerPhone: settings.phone,
-      customerName: 'Cliente Registrado',
+      customerName: sale.customerName ?? 'Clientes Varios',
       customerDocType: 'DOC',
       customerDocNumber: '-',
       items: snapshotItems,
-      subtotal: total + latestSale.discount,
-      discount: latestSale.discount,
+      subtotal: total + sale.discount,
+      discount: sale.discount,
       taxableAmount: taxable,
       igvAmount: igv,
       total: total,
-      paymentMethod: latestSale.paymentMethod,
+      paymentMethod: sale.paymentMethod,
       currency: settings.currency,
     );
 
     if (!mounted) return;
     showDialog(
-      context: context,
+      context: this.context,
       builder: (ctx) => ReceiptViewerDialog(receipt: receipt),
+    );
+  }
+
+  void _confirmVoidSale(BuildContext context, WidgetRef ref, SaleEntity sale) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.errorContainerColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: AppTheme.errorColor, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Text('¿Anular Venta?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.onSurfaceColor)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Estás seguro de que deseas anular la Venta #${sale.id.toString().padLeft(4, '0')} por un total de ${CurrencyFormatter.format(sale.total)}?',
+              style: const TextStyle(fontSize: 14, color: AppTheme.onSurfaceColor),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.outlineVariantColor),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.inventory_2_outlined, size: 18, color: AppTheme.primaryColor),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El stock de los productos vendidos será devuelto automáticamente al inventario.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AppTheme.onSurfaceVariantColor)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor, foregroundColor: Colors.white),
+            onPressed: () async {
+              await ref.read(salesListProvider.notifier).voidSale(sale.id);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text('Venta #${sale.id.toString().padLeft(4, '0')} anulada y stock devuelto con éxito.'),
+                    backgroundColor: AppTheme.secondaryColor,
+                  ),
+                );
+              }
+            },
+            child: const Text('Confirmar Anulación'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -469,6 +849,8 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('¿Vaciar Carrito?'),
         content: const Text('¿Estás seguro de que deseas vaciar todos los productos del carrito?'),
         actions: [

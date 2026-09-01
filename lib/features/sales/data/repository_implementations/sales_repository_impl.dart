@@ -33,7 +33,7 @@ class SalesRepositoryImpl implements SalesRepository {
     final entities = <SaleItemEntity>[];
     for (final item in list) {
       final product = await (_database.select(_database.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-      final productName = product?.name ?? 'Producto Eliminado';
+      final productName = product?.name ?? 'Producto';
       entities.add(_mapItemToEntity(item, productName));
     }
     return entities;
@@ -44,6 +44,11 @@ class SalesRepositoryImpl implements SalesRepository {
     final saleCompanion = _mapToCompanion(sale);
     final itemCompanions = items.map(_mapItemToCompanion).toList();
     return _localDataSource.addSale(saleCompanion, itemCompanions);
+  }
+
+  @override
+  Future<void> deleteSale(int saleId) async {
+    return _localDataSource.deleteSale(saleId);
   }
 
   SaleEntity _mapToEntity(db.Sale sale, String? customerName) {
@@ -73,26 +78,24 @@ class SalesRepositoryImpl implements SalesRepository {
   }
 
   db.SalesCompanion _mapToCompanion(SaleEntity sale) {
-    return db.SalesCompanion(
-      id: sale.id == 0 ? const Value.absent() : Value(sale.id),
-      customerId: Value(sale.customerId),
-      total: Value(sale.total),
+    return db.SalesCompanion.insert(
+      customerId: sale.customerId != null ? Value(sale.customerId) : const Value.absent(),
+      total: sale.total,
       discount: Value(sale.discount),
-      paymentMethod: Value(sale.paymentMethod),
+      paymentMethod: sale.paymentMethod,
       date: Value(sale.date),
       createdAt: Value(sale.createdAt),
     );
   }
 
   db.SaleItemsCompanion _mapItemToCompanion(SaleItemEntity item) {
-    return db.SaleItemsCompanion(
-      id: item.id == 0 ? const Value.absent() : Value(item.id),
-      saleId: Value(item.saleId),
-      productId: Value(item.productId),
-      quantity: Value(item.quantity),
-      unitPurchasePrice: Value(item.unitPurchasePrice),
-      unitSellingPrice: Value(item.unitSellingPrice),
-      subtotal: Value(item.subtotal),
+    return db.SaleItemsCompanion.insert(
+      saleId: item.saleId,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPurchasePrice: item.unitPurchasePrice,
+      unitSellingPrice: item.unitSellingPrice,
+      subtotal: item.subtotal,
     );
   }
 }

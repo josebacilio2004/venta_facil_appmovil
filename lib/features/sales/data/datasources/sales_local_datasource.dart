@@ -5,6 +5,7 @@ abstract class SalesLocalDataSource {
   Future<List<Sale>> getSales({DateTime? startDate, DateTime? endDate});
   Future<List<SaleItem>> getSaleItems(int saleId);
   Future<int> addSale(SalesCompanion sale, List<SaleItemsCompanion> items);
+  Future<void> deleteSale(int saleId);
 }
 
 class SalesLocalDataSourceImpl implements SalesLocalDataSource {
@@ -54,6 +55,25 @@ class SalesLocalDataSourceImpl implements SalesLocalDataSource {
       }
 
       return saleId;
+    });
+  }
+
+  @override
+  Future<void> deleteSale(int saleId) async {
+    return _db.transaction(() async {
+      // 1. Obtener items de la venta para restaurar existencias
+      final items = await (_db.select(_db.saleItems)..where((tbl) => tbl.saleId.equals(saleId))).get();
+      for (final item in items) {
+        final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
+        if (product != null) {
+          final restoredStock = product.stock + item.quantity;
+          await (_db.update(_db.products)..where((tbl) => tbl.id.equals(item.productId)))
+              .write(ProductsCompanion(stock: Value(restoredStock)));
+        }
+      }
+      // 2. Eliminar items y venta
+      await (_db.delete(_db.saleItems)..where((tbl) => tbl.saleId.equals(saleId))).go();
+      await (_db.delete(_db.sales)..where((tbl) => tbl.id.equals(saleId))).go();
     });
   }
 }
