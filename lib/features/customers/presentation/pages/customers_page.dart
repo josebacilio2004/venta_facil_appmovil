@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/widgets/glass_background.dart';
-import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/fintech_card.dart';
 import '../providers/customers_providers.dart';
 import '../../domain/entities/customer.dart';
 import '../widgets/customer_form_dialog.dart';
@@ -14,189 +14,163 @@ class CustomersPage extends ConsumerWidget {
     final customersAsync = ref.watch(customersListProvider);
     final searchQuery = ref.watch(customersSearchQueryProvider);
 
-    return GlassBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'CLIENTES',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-          ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.onSurfaceColor),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: GlassCard(
-                padding: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(16),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por nombre o teléfono...',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                    suffixIcon: searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white70),
-                            onPressed: () => ref.read(customersSearchQueryProvider.notifier).state = '',
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                  onChanged: (val) {
-                    ref.read(customersSearchQueryProvider.notifier).state = val.trim();
-                  },
-                ),
+        title: const Text(
+          'Clientes y Contactos',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor, fontSize: 20),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Search Input
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
+            child: TextField(
+              style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 15),
+              decoration: InputDecoration(
+                hintText: 'Buscar cliente por nombre o teléfono...',
+                prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.outlineColor, size: 20),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppTheme.outlineColor, size: 18),
+                        onPressed: () => ref.read(customersSearchQueryProvider.notifier).state = '',
+                      )
+                    : null,
               ),
+              onChanged: (val) {
+                ref.read(customersSearchQueryProvider.notifier).state = val.trim();
+              },
             ),
-            Expanded(
-              child: customersAsync.when(
-                data: (list) {
-                  if (list.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No se encontraron clientes.',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: list.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemBuilder: (context, index) {
-                      final customer = list[index];
-                      return _buildCustomerCard(context, ref, customer);
-                    },
+          ),
+
+          // Customers List
+          Expanded(
+            child: customersAsync.when(
+              data: (list) {
+                if (list.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.groups_outlined, size: 32, color: AppTheme.outlineColor),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'No hay clientes registrados',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Agrega clientes para asignarlos a tus ventas.',
+                          style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   );
-                },
-                loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-                error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
-              ),
+                }
+                return ListView.builder(
+                  itemCount: list.length,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                  itemBuilder: (context, index) {
+                    final customer = list[index];
+                    return _buildCustomerCard(context, ref, customer);
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+              error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppTheme.errorColor))),
             ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'fab_customers',
-          onPressed: () => _openCustomerForm(context, null),
-          icon: const Icon(Icons.person_add),
-          label: const Text('Nuevo Cliente'),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF0F766E),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomerCard(BuildContext context, WidgetRef ref, CustomerEntity c) {
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12.0),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(
-          backgroundColor: Colors.tealAccent.withOpacity(0.15),
-          foregroundColor: Colors.tealAccent,
-          child: Text(c.name.isNotEmpty ? c.name.substring(0, 1).toUpperCase() : '?'),
-        ),
-        title: Text(
-          c.name,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.phone, size: 14, color: Colors.white60),
-                  const SizedBox(width: 4),
-                  Text(c.phone, style: const TextStyle(color: Colors.white70)),
-                ],
-              ),
-              if (c.email != null && c.email!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.email, size: 14, color: Colors.white60),
-                      const SizedBox(width: 4),
-                      Text(c.email!, style: const TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                ),
-              if (c.notes != null && c.notes!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    'Nota: ${c.notes}',
-                    style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.white54, fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.cyanAccent),
-              onPressed: () => _openCustomerForm(context, c),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: () => _confirmDelete(context, ref, c),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openCustomerForm(BuildContext context, CustomerEntity? c) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => CustomerFormDialog(customer: c),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, WidgetRef ref, CustomerEntity c) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F766E),
-        title: const Text('¿Eliminar Cliente?', style: TextStyle(color: Colors.white)),
-        content: Text('¿Estás seguro de que deseas eliminar a "${c.name}"? Esta acción no se puede deshacer.', style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-            onPressed: () {
-              ref.read(customersListProvider.notifier).deleteCustomer(c.id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar'),
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_customers',
+        onPressed: () => _openCustomerForm(context, null),
+        icon: const Icon(Icons.person_add_rounded),
+        label: const Text('Nuevo Cliente', style: TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: AppTheme.primaryContainerColor,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
+
+  Widget _buildCustomerCard(BuildContext context, WidgetRef ref, CustomerEntity customer) {
+    return FintechCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      onTap: () => _openCustomerForm(context, customer),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppTheme.surfaceContainerLow,
+            child: Text(
+              customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: AppTheme.primaryColor),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurfaceColor),
+                ),
+                const SizedBox(height: 3),
+                if (customer.phone.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.phone_outlined, size: 14, color: AppTheme.outlineColor),
+                      const SizedBox(width: 4),
+                      Text(customer.phone, style: const TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariantColor)),
+                    ],
+                  ),
+                if (customer.notes != null && customer.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    customer.notes!,
+                    style: const TextStyle(fontSize: 12, color: AppTheme.outlineColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+            onPressed: () => _openCustomerForm(context, customer),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openCustomerForm(BuildContext context, CustomerEntity? customer) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CustomerFormDialog(customer: customer),
     );
   }
 }

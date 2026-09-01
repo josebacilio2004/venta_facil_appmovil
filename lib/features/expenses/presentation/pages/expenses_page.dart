@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/fintech_card.dart';
 import '../providers/expenses_providers.dart';
 import '../../domain/entities/expense.dart';
 import '../widgets/expense_form_dialog.dart';
@@ -24,23 +26,25 @@ class ExpensesPage extends ConsumerWidget {
     final filter = ref.watch(expensesFilterProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Gastos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surfaceColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Control de Gastos',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor, fontSize: 20),
+        ),
       ),
       body: Column(
         children: [
-          // Sección de Filtro
+          // Filtro de Categoría
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 10.0),
             child: DropdownButtonFormField<String>(
               value: filter.category,
               decoration: const InputDecoration(
                 labelText: 'Filtrar por Categoría',
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: [
                 const DropdownMenuItem(value: null, child: Text('Todas las categorías')),
@@ -58,100 +62,147 @@ class ExpensesPage extends ConsumerWidget {
           // Listado de Gastos
           Expanded(
             child: expensesAsync.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return const Center(child: Text('No hay gastos registrados.'));
+              data: (expenses) {
+                if (expenses.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.payments_outlined, size: 32, color: AppTheme.outlineColor),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'No hay gastos registrados',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Registra tus compras y salidas de dinero.',
+                          style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  );
                 }
-                return ListView.builder(
-                  itemCount: list.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  itemBuilder: (context, index) {
-                    final expense = list[index];
-                    return _buildExpenseCard(context, ref, expense);
-                  },
+
+                final totalExpenses = expenses.fold<double>(0, (sum, e) => sum + e.amount);
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                      child: FintechCard(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'TOTAL GASTOS:',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.onSurfaceVariantColor),
+                            ),
+                            Text(
+                              CurrencyFormatter.format(totalExpenses),
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.errorColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: expenses.length,
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                        itemBuilder: (context, index) {
+                          final expense = expenses[index];
+                          return _buildExpenseCard(context, ref, expense);
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+              error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppTheme.errorColor))),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         heroTag: 'fab_expenses',
+        backgroundColor: AppTheme.tertiaryColor,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: () => _openExpenseForm(context),
-        icon: const Icon(Icons.add_card),
-        label: const Text('Registrar Gasto'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F766E),
+        child: const Icon(Icons.add, size: 28),
       ),
     );
   }
 
-  Widget _buildExpenseCard(BuildContext context, WidgetRef ref, ExpenseEntity exp) {
-    final categoryLabel = _categoryLabels[exp.category] ?? exp.category;
-    return Card(
+  Widget _buildExpenseCard(BuildContext context, WidgetRef ref, ExpenseEntity expense) {
+    return FintechCard(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.red.withOpacity(0.15),
-          foregroundColor: Colors.red,
-          child: const Icon(Icons.trending_down),
-        ),
-        title: Text(exp.description, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Categoría: $categoryLabel', style: const TextStyle(fontSize: 13)),
-            Text('Fecha: ${DateFormatter.format(exp.date)}', style: const TextStyle(fontSize: 13)),
-            if (exp.observation != null && exp.observation!.isNotEmpty)
-              Text('Obs: ${exp.observation}', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13)),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '- ${CurrencyFormatter.format(exp.amount)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 16),
+      padding: const EdgeInsets.all(14),
+      onTap: () => _openExpenseForm(context, expense: expense),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.errorContainerColor.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _confirmDelete(context, ref, exp),
+            child: const Icon(Icons.payments_rounded, color: AppTheme.errorColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  expense.description,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurfaceColor),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_categoryLabels[expense.category] ?? expense.category} • ${DateFormatter.format(expense.date)}',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor),
+                ),
+                if (expense.observation != null && expense.observation!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    expense.observation!,
+                    style: const TextStyle(fontSize: 11, color: AppTheme.outlineColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+          Text(
+            CurrencyFormatter.format(expense.amount),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.errorColor),
+          ),
+        ],
       ),
     );
   }
 
-  void _openExpenseForm(BuildContext context) {
+  void _openExpenseForm(BuildContext context, {ExpenseEntity? expense}) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const ExpenseFormDialog(),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, WidgetRef ref, ExpenseEntity exp) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Eliminar Gasto?'),
-        content: Text('¿Estás seguro de que deseas eliminar el gasto "${exp.description}" de ${CurrencyFormatter.format(exp.amount)}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
-              ref.read(expensesListProvider.notifier).deleteExpense(exp.id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      builder: (context) => ExpenseFormDialog(expense: expense),
     );
   }
 }

@@ -1,20 +1,19 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/glass_background.dart';
+import '../theme/app_theme.dart';
+import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
-import '../../features/dashboard/presentation/pages/more_page.dart';
 import '../../features/products/presentation/pages/products_page.dart';
 import '../../features/sales/presentation/pages/sales_page.dart';
 import '../../features/expenses/presentation/pages/expenses_page.dart';
+import '../../features/dashboard/presentation/pages/more_page.dart';
 import '../../features/customers/presentation/pages/customers_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
-import '../../features/auth/presentation/pages/login_page.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final GoRouter appRouter = GoRouter(
+final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/login',
   routes: [
@@ -27,22 +26,16 @@ final GoRouter appRouter = GoRouter(
         return ScaffoldWithNavBar(navigationShell: navigationShell);
       },
       branches: [
+        // Tab 0: Inicio
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/',
+              path: '/dashboard',
               builder: (context, state) => const DashboardPage(),
             ),
           ],
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/products',
-              builder: (context, state) => const ProductsPage(),
-            ),
-          ],
-        ),
+        // Tab 1: Ventas
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -51,6 +44,16 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
+        // Tab 2: Productos
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/products',
+              builder: (context, state) => const ProductsPage(),
+            ),
+          ],
+        ),
+        // Tab 3: Gastos
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -59,6 +62,7 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
+        // Tab 4: Más
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -69,7 +73,7 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
-    // Sub-rutas accesibles desde el menú Más
+    // Sub-rutas secundarias accesibles desde "Más" o Dashboard
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,
       path: '/customers',
@@ -91,47 +95,73 @@ final GoRouter appRouter = GoRouter(
 class ScaffoldWithNavBar extends StatelessWidget {
   const ScaffoldWithNavBar({
     required this.navigationShell,
-    Key? key,
-  }) : super(key: key ?? const ValueKey<String>('ScaffoldWithNavBar'));
+    super.key,
+  });
 
   final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
-    return GlassBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: navigationShell,
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.15),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withOpacity(0.15),
-                width: 1,
-              ),
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: navigationShell,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: AppTheme.outlineVariantColor,
+              width: 1,
             ),
           ),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: BottomNavigationBar(
-                items: const <BottomNavigationBarItem>[
-                  BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Inicio'),
-                  BottomNavigationBarItem(icon: Icon(Icons.shopping_bag_outlined), activeIcon: Icon(Icons.shopping_bag), label: 'Productos'),
-                  BottomNavigationBarItem(icon: Icon(Icons.add_shopping_cart_outlined), activeIcon: Icon(Icons.add_shopping_cart), label: 'Ventas'),
-                  BottomNavigationBarItem(icon: Icon(Icons.money_off_outlined), activeIcon: Icon(Icons.money_off), label: 'Gastos'),
-                  BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Más'),
-                ],
-                currentIndex: navigationShell.currentIndex,
-                onTap: (int index) => _onTap(context, index),
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: Colors.transparent,
-                selectedItemColor: Colors.tealAccent,
-                unselectedItemColor: Colors.white60,
-                elevation: 0,
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 10,
+              offset: Offset(0, -2),
             ),
+          ],
+        ),
+        child: SafeArea(
+          child: BottomNavigationBar(
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home_rounded),
+                label: 'Inicio',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.receipt_long_outlined),
+                activeIcon: Icon(Icons.receipt_long_rounded),
+                label: 'Ventas',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2_outlined),
+                activeIcon: Icon(Icons.inventory_2_rounded),
+                label: 'Productos',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.payments_outlined),
+                activeIcon: Icon(Icons.payments_rounded),
+                label: 'Gastos',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.menu_rounded),
+                activeIcon: Icon(Icons.menu_open_rounded),
+                label: 'Más',
+              ),
+            ],
+            currentIndex: navigationShell.currentIndex,
+            onTap: (int index) => _onTap(context, index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: AppTheme.primaryColor,
+            unselectedItemColor: AppTheme.outlineColor,
+            elevation: 0,
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
       ),

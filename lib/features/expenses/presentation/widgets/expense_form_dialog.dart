@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/expense.dart';
 import '../providers/expenses_providers.dart';
 
 class ExpenseFormDialog extends ConsumerStatefulWidget {
-  const ExpenseFormDialog({super.key});
+  final ExpenseEntity? expense;
+
+  const ExpenseFormDialog({super.key, this.expense});
 
   @override
   ConsumerState<ExpenseFormDialog> createState() => _ExpenseFormDialogState();
@@ -13,12 +16,12 @@ class ExpenseFormDialog extends ConsumerStatefulWidget {
 
 class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _descriptionController = TextEditingController();
-  final _amountController = TextEditingController();
-  final _observationController = TextEditingController();
+  late TextEditingController _descriptionController;
+  late TextEditingController _amountController;
+  late TextEditingController _observationController;
   
-  String _selectedCategory = 'compras';
-  DateTime _selectedDate = DateTime.now();
+  late String _selectedCategory;
+  late DateTime _selectedDate;
 
   final List<Map<String, String>> _categories = [
     {'value': 'compras', 'label': 'Compras de Mercadería'},
@@ -30,6 +33,17 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    final e = widget.expense;
+    _descriptionController = TextEditingController(text: e?.description ?? '');
+    _amountController = TextEditingController(text: e != null ? e.amount.toStringAsFixed(2) : '');
+    _observationController = TextEditingController(text: e?.observation ?? '');
+    _selectedCategory = e?.category ?? 'compras';
+    _selectedDate = e?.date ?? DateTime.now();
+  }
+
+  @override
   void dispose() {
     _descriptionController.dispose();
     _amountController.dispose();
@@ -39,8 +53,28 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.expense != null;
+
     return AlertDialog(
-      title: const Text('Registrar Gasto', style: TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.errorContainerColor.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.payments_rounded, color: AppTheme.errorColor, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            isEdit ? 'Editar Gasto' : 'Registrar Gasto',
+            style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor, fontSize: 18),
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -68,30 +102,32 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Ingresa un monto';
-                  if (double.tryParse(val) == null) return 'Monto inválido';
+                  if (double.tryParse(val) == null || double.parse(val) <= 0) return 'Monto inválido';
                   return null;
                 },
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Fecha: ${DateFormatter.format(_selectedDate)}',
-                      style: const TextStyle(fontSize: 15),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _pickDate,
-                    icon: const Icon(Icons.calendar_today),
-                    label: const Text('Cambiar'),
-                  ),
-                ],
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Fecha del gasto:', style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariantColor)),
+                subtitle: Text(DateFormatter.format(_selectedDate), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                trailing: const Icon(Icons.calendar_today_rounded, size: 18, color: AppTheme.primaryColor),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDate = picked);
+                  }
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _observationController,
-                decoration: const InputDecoration(labelText: 'Observación (opcional)'),
+                decoration: const InputDecoration(labelText: 'Observación (Opcional)'),
                 maxLines: 2,
               ),
             ],
@@ -99,44 +135,68 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
         ),
       ),
       actions: [
+        if (isEdit)
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            onPressed: () => _confirmDelete(context),
+            child: const Text('Eliminar'),
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: const Text('Cancelar', style: TextStyle(color: AppTheme.onSurfaceVariantColor)),
         ),
         ElevatedButton(
-          onPressed: _save,
-          child: const Text('Guardar'),
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.tertiaryColor),
+          onPressed: _saveExpense,
+          child: Text(isEdit ? 'Actualizar' : 'Guardar'),
         ),
       ],
     );
   }
 
-  void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
+  void _saveExpense() async {
+    if (_formKey.currentState!.validate()) {
+      final isEdit = widget.expense != null;
+      if (isEdit) {
+        await ref.read(deleteExpenseUseCaseProvider).call(widget.expense!.id);
+      }
+
+      final expense = ExpenseEntity(
+        id: 0,
+        category: _selectedCategory,
+        description: _descriptionController.text.trim(),
+        amount: double.parse(_amountController.text.trim()),
+        date: _selectedDate,
+        observation: _observationController.text.trim().isEmpty ? null : _observationController.text.trim(),
+        createdAt: isEdit ? widget.expense!.createdAt : DateTime.now(),
+      );
+
+      await ref.read(addExpenseUseCaseProvider).call(expense);
+      ref.invalidate(expensesListProvider);
+      if (mounted) Navigator.pop(context);
     }
   }
 
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
-
-    final newExpense = ExpenseEntity(
-      id: 0,
-      category: _selectedCategory,
-      description: _descriptionController.text.trim(),
-      amount: double.parse(_amountController.text),
-      date: _selectedDate,
-      observation: _observationController.text.trim().isEmpty ? null : _observationController.text.trim(),
-      createdAt: DateTime.now(),
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar gasto?'),
+        content: const Text('¿Estás seguro de que deseas eliminar este registro de gasto?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor, foregroundColor: Colors.white),
+            onPressed: () async {
+              await ref.read(deleteExpenseUseCaseProvider).call(widget.expense!.id);
+              ref.invalidate(expensesListProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
-
-    ref.read(expensesListProvider.notifier).addExpense(newExpense);
-    Navigator.pop(context);
   }
 }

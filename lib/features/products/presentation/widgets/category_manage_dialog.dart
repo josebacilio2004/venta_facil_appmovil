@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../domain/entities/category.dart';
 import '../providers/products_providers.dart';
 
 class CategoryManageDialog extends ConsumerStatefulWidget {
@@ -24,10 +26,28 @@ class _CategoryManageDialogState extends ConsumerState<CategoryManageDialog> {
     final categoriesAsync = ref.watch(categoriesListProvider);
 
     return AlertDialog(
-      title: const Text('Administrar Categorías', style: TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+            ),
+            child: const Icon(Icons.category_rounded, color: AppTheme.primaryColor, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Categorías',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurfaceColor),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
-        height: 300,
+        height: 320,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -41,56 +61,64 @@ class _CategoryManageDialogState extends ConsumerState<CategoryManageDialog> {
                       controller: _textController,
                       decoration: const InputDecoration(
                         labelText: 'Nueva categoría',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                       validator: (val) => val == null || val.trim().isEmpty ? 'Escribe un nombre' : null,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
+                    padding: const EdgeInsets.only(top: 2.0),
                     child: IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: _addCategory,
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.add_rounded),
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 24),
+            const Divider(height: 24, color: AppTheme.outlineVariantColor),
             Expanded(
               child: categoriesAsync.when(
-                data: (list) {
-                  if (list.isEmpty) {
-                    return const Center(child: Text('No hay categorías'));
+                data: (cats) {
+                  if (cats.isEmpty) {
+                    return const Center(
+                      child: Text('No hay categorías creadas', style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                    );
                   }
-                  return ListView.builder(
-                    itemCount: list.length,
+                  return ListView.separated(
+                    itemCount: cats.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.outlineVariantColor),
                     itemBuilder: (context, index) {
-                      final cat = list[index];
-                      // Categorías por defecto no se deberían eliminar si queremos protegerlas
-                      final isDefault = ['Abarrotes', 'Bebidas', 'Snacks', 'Limpieza', 'Otros'].contains(cat.name);
+                      final c = cats[index];
                       return ListTile(
-                        title: Text(cat.name),
-                        trailing: isDefault 
-                          ? null 
-                          : IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _confirmDelete(cat.id, cat.name),
-                            ),
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.onSurfaceColor)),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 20),
+                          onPressed: () async {
+                            await ref.read(deleteCategoryUseCaseProvider).call(c.id);
+                            ref.invalidate(categoriesListProvider);
+                          },
+                        ),
                       );
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => Text('Error: $e'),
+                loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+                error: (err, _) => Center(child: Text('Error: $err')),
               ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
+        ElevatedButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cerrar'),
         ),
@@ -98,30 +126,12 @@ class _CategoryManageDialogState extends ConsumerState<CategoryManageDialog> {
     );
   }
 
-  void _addCategory() {
-    if (!_formKey.currentState!.validate()) return;
-    ref.read(categoriesListProvider.notifier).addCategory(_textController.text.trim(), null);
-    _textController.clear();
-  }
-
-  void _confirmDelete(int id, String name) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Eliminar Categoría?'),
-        content: Text('¿Estás seguro de que deseas eliminar la categoría "$name"? Esto desvinculará sus productos asociados.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
-              ref.read(categoriesListProvider.notifier).deleteCategory(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
+  void _addCategory() async {
+    if (_formKey.currentState!.validate()) {
+      final name = _textController.text.trim();
+      await ref.read(addCategoryUseCaseProvider).call(CategoryEntity(id: 0, name: name));
+      _textController.clear();
+      ref.invalidate(categoriesListProvider);
+    }
   }
 }

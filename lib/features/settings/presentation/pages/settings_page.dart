@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/widgets/glass_background.dart';
-import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/fintech_card.dart';
 import '../providers/settings_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -12,145 +12,144 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(settingsNotifierProvider);
     final notifier = ref.read(settingsNotifierProvider.notifier);
 
-    return GlassBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'CONFIGURACIÓN',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-          ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.onSurfaceColor),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        body: settings.isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.white))
-            : ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                children: [
-                  _buildSectionHeader('Datos de la Empresa / Emisor SUNAT'),
-                  GlassCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.storefront, color: Colors.tealAccent),
-                          title: const Text('Razón Social / Nombre Comercial', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.businessName, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Nombre Comercial', 'business_name', settings.businessName),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.badge_outlined, color: Colors.tealAccent),
-                          title: const Text('RUC de la Empresa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.ruc, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Número de RUC (11 dígitos)', 'ruc', settings.ruc, isNumeric: true),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.location_on_outlined, color: Colors.tealAccent),
-                          title: const Text('Dirección del Establecimiento', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.address, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Dirección Fiscal', 'address', settings.address),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.phone_outlined, color: Colors.tealAccent),
-                          title: const Text('Teléfono de Contacto', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.phone, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Teléfono', 'phone', settings.phone, isNumeric: true),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.point_of_sale, color: Colors.cyanAccent),
-                          title: const Text('Serie de Máquina POS (Ticket SUNAT)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.machineSeries, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'N° Serie Máquina Registradora', 'machine_series', settings.machineSeries),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.receipt_long, color: Colors.cyanAccent),
-                          title: const Text('Serie de Boleta Electrónica', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.boletaSeries, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Serie Boleta (ej: B001)', 'boleta_series', settings.boletaSeries),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildSectionHeader('Preferencias de la Aplicación'),
-                  GlassCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.monetization_on_outlined, color: Colors.tealAccent),
-                          title: const Text('Moneda de la Aplicación', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: Text(settings.currency, style: const TextStyle(color: Colors.white70)),
-                          trailing: const Icon(Icons.edit, color: Colors.white70, size: 20),
-                          onTap: () => _editSingleField(context, ref, 'Símbolo de Moneda (ej: S/., \$, €)', 'currency', settings.currency),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        SwitchListTile(
-                          secondary: const Icon(Icons.dark_mode_outlined, color: Colors.tealAccent),
-                          title: const Text('Modo Oscuro', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: const Text('Alternar entre tema claro y oscuro', style: TextStyle(color: Colors.white70)),
-                          value: settings.themeMode == 'dark',
-                          activeColor: Colors.tealAccent,
-                          onChanged: (val) {
-                            notifier.updateThemeMode(val ? 'dark' : 'light');
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildSectionHeader('Respaldo y Restauración'),
-                  GlassCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.backup_outlined, color: Colors.greenAccent),
-                          title: const Text('Copia de Seguridad', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: const Text('Exportar base de datos a un archivo local', style: TextStyle(color: Colors.white70)),
-                          onTap: () => _runBackup(context, ref),
-                        ),
-                        const Divider(color: Colors.white12, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.restore_outlined, color: Colors.orangeAccent),
-                          title: const Text('Restaurar Datos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          subtitle: const Text('Importar datos desde una copia previa', style: TextStyle(color: Colors.white70)),
-                          onTap: () => _runRestore(context, ref),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                ],
-              ),
+        title: const Text(
+          'Perfil y Configuración',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor, fontSize: 20),
+        ),
       ),
+      body: settings.isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
+              children: [
+                _buildSectionHeader('Datos de la Empresa / Emisor SUNAT'),
+                FintechCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.storefront_rounded, color: AppTheme.primaryColor),
+                        title: const Text('Razón Social / Nombre Comercial', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.businessName, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Nombre Comercial', 'business_name', settings.businessName),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.badge_outlined, color: AppTheme.primaryColor),
+                        title: const Text('RUC de la Empresa', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.ruc, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Número de RUC (11 dígitos)', 'ruc', settings.ruc, isNumeric: true),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined, color: AppTheme.primaryColor),
+                        title: const Text('Dirección del Establecimiento', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.address, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Dirección Fiscal', 'address', settings.address),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.phone_outlined, color: AppTheme.primaryColor),
+                        title: const Text('Teléfono de Contacto', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.phone, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Teléfono', 'phone', settings.phone, isNumeric: true),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.point_of_sale_rounded, color: AppTheme.primaryColor),
+                        title: const Text('Serie de Máquina POS (Ticket SUNAT)', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.machineSeries, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'N° Serie Máquina Registradora', 'machine_series', settings.machineSeries),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),
+                        title: const Text('Serie de Boleta Electrónica', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.boletaSeries, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Serie Boleta (ej: B001)', 'boleta_series', settings.boletaSeries),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _buildSectionHeader('Preferencias de la Aplicación'),
+                FintechCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.monetization_on_outlined, color: AppTheme.primaryColor),
+                        title: const Text('Moneda de la Aplicación', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text(settings.currency, style: const TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        trailing: const Icon(Icons.edit_outlined, color: AppTheme.outlineColor, size: 20),
+                        onTap: () => _editSingleField(context, ref, 'Símbolo de Moneda (ej: S/., \$, €)', 'currency', settings.currency),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.dark_mode_outlined, color: AppTheme.primaryColor),
+                        title: const Text('Modo Oscuro', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: const Text('Alternar entre tema claro y oscuro', style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        value: settings.themeMode == 'dark',
+                        activeTrackColor: AppTheme.primaryColor,
+                        onChanged: (val) {
+                          notifier.updateThemeMode(val ? 'dark' : 'light');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _buildSectionHeader('Respaldo y Restauración'),
+                FintechCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.backup_outlined, color: AppTheme.secondaryColor),
+                        title: const Text('Copia de Seguridad', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: const Text('Exportar base de datos a un archivo local', style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        onTap: () => _runBackup(context, ref),
+                      ),
+                      const Divider(color: AppTheme.outlineVariantColor, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.restore_outlined, color: AppTheme.tertiaryColor),
+                        title: const Text('Restaurar Datos', style: TextStyle(color: AppTheme.onSurfaceColor, fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: const Text('Importar datos desde una copia previa', style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13)),
+                        onTap: () => _runRestore(context, ref),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
     );
   }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white54, letterSpacing: 1.1),
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppTheme.onSurfaceVariantColor, letterSpacing: 0.8),
       ),
     );
   }
@@ -167,26 +166,20 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F766E),
-        title: Text('Modificar $label', style: const TextStyle(color: Colors.white, fontSize: 17)),
+        title: Text('Modificar $label'),
         content: TextFormField(
           controller: controller,
           keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             labelText: label,
-            labelStyle: const TextStyle(color: Colors.white70),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.tealAccent)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent, foregroundColor: Colors.black),
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
                 ref.read(settingsNotifierProvider.notifier).updateBusinessField(dbKey, controller.text.trim());
@@ -204,7 +197,7 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
     );
 
     try {
@@ -214,12 +207,10 @@ class SettingsPage extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0F766E),
-            title: const Text('Respaldo Exitoso', style: TextStyle(color: Colors.white)),
-            content: Text('Se exportó la base de datos local a:\n\n$path\n\nPuedes copiar este archivo para guardarlo.', style: const TextStyle(color: Colors.white70)),
+            title: const Text('Respaldo Exitoso'),
+            content: Text('Se exportó la base de datos local a:\n\n$path\n\nPuedes copiar este archivo para guardarlo.'),
             actions: [
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent, foregroundColor: Colors.black),
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('Entendido'),
               ),
@@ -233,7 +224,7 @@ class SettingsPage extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -245,23 +236,17 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F766E),
-        title: const Text('Restaurar Datos', style: TextStyle(color: Colors.white)),
+        title: const Text('Restaurar Datos'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Ingresa la ruta absoluta del archivo SQLite (.sqlite) para restaurar los datos:', style: TextStyle(color: Colors.white70)),
+            const Text('Ingresa la ruta absoluta del archivo SQLite (.sqlite) para restaurar los datos:', style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariantColor)),
             const SizedBox(height: 12),
             TextFormField(
               controller: controller,
-              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Ruta del archivo',
-                labelStyle: TextStyle(color: Colors.white70),
                 hintText: '/ruta/al/archivo/ventafacil_backup.sqlite',
-                hintStyle: TextStyle(color: Colors.white30),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.tealAccent)),
               ),
             ),
           ],
@@ -269,10 +254,10 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orangeAccent, foregroundColor: Colors.black),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.tertiaryColor),
             onPressed: () async {
               final path = controller.text.trim();
               if (path.isEmpty) return;
@@ -281,7 +266,7 @@ class SettingsPage extends ConsumerWidget {
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (c) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+                builder: (c) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
               );
 
               try {
@@ -291,7 +276,7 @@ class SettingsPage extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Datos restaurados correctamente.'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppTheme.secondaryColor,
                     ),
                   );
                 }
@@ -301,7 +286,7 @@ class SettingsPage extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error al restaurar: $e'),
-                      backgroundColor: Colors.redAccent,
+                      backgroundColor: AppTheme.errorColor,
                     ),
                   );
                 }

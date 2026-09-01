@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../customers/presentation/providers/customers_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
@@ -41,11 +42,24 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
     final customersAsync = ref.watch(customersListProvider);
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF0F766E),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      title: const Text(
-        'Confirmar y Emitir Comprobante',
-        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.point_of_sale_rounded, color: AppTheme.primaryColor, size: 22),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Confirmar Venta',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor, fontSize: 18),
+          ),
+        ],
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -56,12 +70,12 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             _buildRowSummary('Subtotal', CurrencyFormatter.format(cart.subtotal)),
             if (cart.discount > 0)
               _buildRowSummary('Descuento aplicado', '- ${CurrencyFormatter.format(cart.discount)}', isDiscount: true),
-            const Divider(color: Colors.white24),
-            _buildRowSummary('TOTAL A PAGAR', CurrencyFormatter.format(cart.total), isTotal: true),
-            const SizedBox(height: 14),
+            const Divider(color: AppTheme.outlineVariantColor),
+            _buildRowSummary('TOTAL A COBRAR', CurrencyFormatter.format(cart.total), isTotal: true),
+            const SizedBox(height: 16),
 
             // Tipo de Comprobante
-            const Text('Tipo de Comprobante:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14)),
+            const Text('Comprobante SUNAT:', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor, fontSize: 13)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -69,12 +83,15 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                   child: ChoiceChip(
                     label: const Center(child: Text('Ticket POS')),
                     selected: _selectedDocType == DocumentType.ticket,
-                    selectedColor: Colors.tealAccent,
+                    selectedColor: AppTheme.primaryColor,
                     labelStyle: TextStyle(
-                      color: _selectedDocType == DocumentType.ticket ? Colors.black : Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: _selectedDocType == DocumentType.ticket ? Colors.white : AppTheme.onSurfaceVariantColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
-                    backgroundColor: Colors.white12,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: AppTheme.outlineVariantColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     onSelected: (selected) {
                       if (selected) setState(() => _selectedDocType = DocumentType.ticket);
                     },
@@ -85,12 +102,15 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                   child: ChoiceChip(
                     label: const Center(child: Text('Boleta Electrónica')),
                     selected: _selectedDocType == DocumentType.boleta,
-                    selectedColor: Colors.tealAccent,
+                    selectedColor: AppTheme.primaryColor,
                     labelStyle: TextStyle(
-                      color: _selectedDocType == DocumentType.boleta ? Colors.black : Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: _selectedDocType == DocumentType.boleta ? Colors.white : AppTheme.onSurfaceVariantColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
-                    backgroundColor: Colors.white12,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: AppTheme.outlineVariantColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     onSelected: (selected) {
                       if (selected) setState(() => _selectedDocType = DocumentType.boleta);
                     },
@@ -104,41 +124,29 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             customersAsync.when(
               data: (list) => DropdownButtonFormField<int>(
                 value: _selectedCustomerId,
-                dropdownColor: const Color(0xFF0F766E),
-                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: _selectedDocType == DocumentType.boleta ? 'Cliente (Recomendado DNI/RUC)' : 'Cliente (Opcional)',
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.08),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Clientes Varios / Sin Documento', style: TextStyle(color: Colors.white))),
+                  const DropdownMenuItem(value: null, child: Text('Clientes Varios / Sin Documento')),
                   ...list.map((c) => DropdownMenuItem(
                     value: c.id,
-                    child: Text('${c.name} ${c.phone.isNotEmpty ? '(${c.phone})' : ''}', style: const TextStyle(color: Colors.white)),
+                    child: Text('${c.name} ${c.phone.isNotEmpty ? '(${c.phone})' : ''}'),
                   )),
                 ],
                 onChanged: (val) => setState(() => _selectedCustomerId = val),
               ),
-              loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-              error: (_, __) => const Text('Error al cargar clientes', style: TextStyle(color: Colors.white70)),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+              error: (_, __) => const Text('Error al cargar clientes'),
             ),
             const SizedBox(height: 12),
 
             // Ingreso de Descuento
             TextFormField(
               controller: _discountController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Aplicar Descuento (S/.)',
-                labelStyle: const TextStyle(color: Colors.white70),
                 prefixText: 'S/. ',
-                prefixStyle: const TextStyle(color: Colors.tealAccent),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.08),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               onChanged: (val) {
@@ -149,7 +157,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             const SizedBox(height: 14),
 
             // Métodos de Pago
-            const Text('Método de Pago:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14)),
+            const Text('Método de Pago:', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor, fontSize: 13)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -159,12 +167,15 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                 return ChoiceChip(
                   label: Text(m['label']!),
                   selected: isSelected,
-                  selectedColor: Colors.tealAccent,
+                  selectedColor: AppTheme.primaryColor,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white70,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.white : AppTheme.onSurfaceVariantColor,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 12,
                   ),
-                  backgroundColor: Colors.white12,
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: AppTheme.outlineVariantColor),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   onSelected: (selected) {
                     if (selected) {
                       setState(() => _selectedPaymentMethod = m['value']!);
@@ -182,17 +193,14 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             ref.read(cartProvider.notifier).applyDiscount(0.0);
             Navigator.pop(context);
           },
-          child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+          child: const Text('Cancelar', style: TextStyle(color: AppTheme.onSurfaceVariantColor)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.tealAccent,
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: AppTheme.primaryContainerColor,
           ),
           onPressed: () => _confirmCheckout(context),
-          child: const Text('Emitir y Cobrar', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Emitir Comprobante y Cobrar'),
         ),
       ],
     );
@@ -201,15 +209,15 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
   Widget _buildRowSummary(String label, String value, {bool isTotal = false, bool isDiscount = false}) {
     final style = TextStyle(
       fontSize: isTotal ? 17 : 13,
-      fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+      fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
       color: isTotal
-          ? Colors.tealAccent
+          ? AppTheme.primaryColor
           : isDiscount
-              ? Colors.orangeAccent
-              : Colors.white70,
+              ? AppTheme.tertiaryColor
+              : AppTheme.onSurfaceVariantColor,
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -313,7 +321,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Error al registrar venta: $e'),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }

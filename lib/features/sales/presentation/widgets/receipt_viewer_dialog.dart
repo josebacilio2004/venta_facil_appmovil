@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../domain/entities/receipt_data.dart';
 import '../utils/receipt_formatter.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 
@@ -27,7 +28,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     if (_currentDocType == widget.receipt.documentType) {
       return widget.receipt;
     }
-    // Switch document type and adapt series prefix
     final prefix = _currentDocType == DocumentType.boleta ? 'B001' : 'T001';
     final correlativo = widget.receipt.saleId.toString().padLeft(8, '0');
     return ReceiptData(
@@ -65,13 +65,13 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F766E),
+          color: AppTheme.primaryColor,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -86,16 +86,16 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.receipt_long, color: Colors.tealAccent),
+                      Icon(Icons.receipt_long_rounded, color: Colors.white),
                       SizedBox(width: 8),
                       Text(
-                        'Comprobante Emitido',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                        'Comprobante SUNAT',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -108,7 +108,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -120,16 +120,16 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _currentDocType == DocumentType.ticket ? Colors.tealAccent : Colors.transparent,
+                            color: _currentDocType == DocumentType.ticket ? Colors.white : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Ticket POS',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _currentDocType == DocumentType.ticket ? Colors.black : Colors.white70,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              color: _currentDocType == DocumentType.ticket ? AppTheme.primaryColor : Colors.white70,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -142,16 +142,16 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _currentDocType == DocumentType.boleta ? Colors.tealAccent : Colors.transparent,
+                            color: _currentDocType == DocumentType.boleta ? Colors.white : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Boleta Electrónica',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _currentDocType == DocumentType.boleta ? Colors.black : Colors.white70,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              color: _currentDocType == DocumentType.boleta ? AppTheme.primaryColor : Colors.white70,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -172,7 +172,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -189,59 +189,60 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                         Text(
                           receipt.issuerName.toUpperCase(),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.black87),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.onSurfaceColor),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'RUC: ${receipt.issuerRuc}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54),
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.onSurfaceVariantColor),
                         ),
                         Text(
                           receipt.issuerAddress,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                          style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariantColor),
                         ),
                         if (receipt.issuerPhone.isNotEmpty)
                           Text(
                             'Telf: ${receipt.issuerPhone}',
-                            style: const TextStyle(fontSize: 11, color: Colors.black54),
+                            style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariantColor),
                           ),
                         
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(color: Colors.black26, thickness: 1),
+                          child: Divider(color: AppTheme.outlineVariantColor, thickness: 1),
                         ),
 
                         // Document Badge & Number
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black87, width: 1.2),
-                            borderRadius: BorderRadius.circular(4),
+                            color: AppTheme.surfaceContainerLow,
+                            border: Border.all(color: AppTheme.outlineColor, width: 1),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             receipt.documentTitle,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black87),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: AppTheme.onSurfaceColor),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'N° ${receipt.seriesNumber}',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.black87, letterSpacing: 0.5),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.onSurfaceColor, letterSpacing: 0.5),
                         ),
                         if (receipt.documentType == DocumentType.ticket)
                           Padding(
                             padding: const EdgeInsets.only(top: 2.0),
                             child: Text(
                               'N° Serie Máquina: ${receipt.machineSeries}',
-                              style: const TextStyle(fontSize: 10, color: Colors.black54),
+                              style: const TextStyle(fontSize: 10, color: AppTheme.onSurfaceVariantColor),
                             ),
                           ),
 
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(color: Colors.black26, thickness: 1),
+                          child: Divider(color: AppTheme.outlineVariantColor, thickness: 1),
                         ),
 
                         // Metadata (Fecha, Cliente)
@@ -255,7 +256,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
 
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(color: Colors.black87, thickness: 1),
+                          child: Divider(color: AppTheme.onSurfaceColor, thickness: 1),
                         ),
 
                         // Table Header
@@ -267,7 +268,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Divider(color: Colors.black12, thickness: 1),
+                        const Divider(color: AppTheme.outlineVariantColor, thickness: 1),
 
                         // Items list
                         ...receipt.items.map((item) => Padding(
@@ -280,18 +281,18 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(item.productName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                    Text('@ ${CurrencyFormatter.format(item.unitPrice)}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                                    Text(item.productName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.onSurfaceColor)),
+                                    Text('@ ${CurrencyFormatter.format(item.unitPrice)}', style: const TextStyle(fontSize: 10, color: AppTheme.onSurfaceVariantColor)),
                                   ],
                                 ),
                               ),
                               Expanded(
                                 flex: 2,
-                                child: Text('${item.quantity}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+                                child: Text('${item.quantity}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceColor)),
                               ),
                               Expanded(
                                 flex: 3,
-                                child: Text(CurrencyFormatter.format(item.subtotal), textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                child: Text(CurrencyFormatter.format(item.subtotal), textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor)),
                               ),
                             ],
                           ),
@@ -299,7 +300,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
 
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(color: Colors.black26, thickness: 1),
+                          child: Divider(color: AppTheme.outlineVariantColor, thickness: 1),
                         ),
 
                         // Financial totals
@@ -317,30 +318,30 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('TOTAL:', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                            const Text('TOTAL:', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.onSurfaceColor)),
                             Text(
                               CurrencyFormatter.format(receipt.total),
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.black87),
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppTheme.primaryColor),
                             ),
                           ],
                         ),
 
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 10.0),
-                          child: Divider(color: Colors.black26, thickness: 1),
+                          child: Divider(color: AppTheme.outlineVariantColor, thickness: 1),
                         ),
 
                         // SUNAT QR Simulation box
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black26),
+                            border: Border.all(color: AppTheme.outlineVariantColor),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.qr_code_2, size: 48, color: Colors.black87),
+                              const Icon(Icons.qr_code_2_rounded, size: 48, color: AppTheme.onSurfaceColor),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -350,12 +351,12 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                                       receipt.documentType == DocumentType.boleta
                                           ? 'Representación impresa de la BOLETA ELECTRÓNICA'
                                           : 'Comprobante de Caja Registradora',
-                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
+                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceColor),
                                     ),
                                     const SizedBox(height: 2),
                                     const Text(
                                       'Autorizado por SUNAT / VentaFácil',
-                                      style: TextStyle(fontSize: 8, color: Colors.black54),
+                                      style: TextStyle(fontSize: 8, color: AppTheme.onSurfaceVariantColor),
                                     ),
                                   ],
                                 ),
@@ -366,7 +367,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                         const SizedBox(height: 8),
                         const Text(
                           '¡GRACIAS POR SU COMPRA!',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: Colors.black87),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: AppTheme.onSurfaceColor),
                         ),
                       ],
                     ),
@@ -389,7 +390,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => _copyToClipboard(context, receipt),
-                      icon: const Icon(Icons.copy, size: 18),
+                      icon: const Icon(Icons.copy_rounded, size: 18),
                       label: const Text('Copiar'),
                     ),
                   ),
@@ -397,13 +398,13 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.tealAccent,
-                        foregroundColor: Colors.black,
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => _printReceipt(context, receipt),
-                      icon: const Icon(Icons.print, size: 18),
+                      icon: const Icon(Icons.print_rounded, size: 18),
                       label: const Text('Imprimir'),
                     ),
                   ),
@@ -411,8 +412,8 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0F766E),
+                        backgroundColor: AppTheme.primaryContainerColor,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -435,7 +436,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariantColor)),
           Flexible(
             child: Text(
               value,
@@ -443,7 +444,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: isDiscount ? Colors.red[700] : Colors.black87,
+                color: isDiscount ? AppTheme.errorColor : AppTheme.onSurfaceColor,
               ),
             ),
           ),
@@ -458,7 +459,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Ticket copiado al portapapeles. Listo para WhatsApp o impresora.'),
-        backgroundColor: Colors.teal,
+        backgroundColor: AppTheme.primaryColor,
       ),
     );
   }
@@ -468,27 +469,27 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F766E),
-        title: const Text('Vista de Impresión', style: TextStyle(color: Colors.white)),
+        title: const Text('Vista de Impresión'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
                 'Comprobante listo para enviar a tu impresora de tickets o impresora térmica POS.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13),
               ),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.black26,
+                  color: AppTheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.outlineVariantColor),
                 ),
                 child: Text(
                   plainText,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.white),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppTheme.onSurfaceColor),
                 ),
               ),
             ],
@@ -497,18 +498,17 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar', style: TextStyle(color: Colors.white70)),
+            child: const Text('Cerrar'),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent, foregroundColor: Colors.black),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: plainText));
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Comprobante enviado a la cola de impresión.'), backgroundColor: Colors.green),
+                const SnackBar(content: Text('Comprobante enviado a la cola de impresión.'), backgroundColor: AppTheme.secondaryColor),
               );
             },
-            icon: const Icon(Icons.print),
+            icon: const Icon(Icons.print_rounded),
             label: const Text('Confirmar Impresión'),
           ),
         ],

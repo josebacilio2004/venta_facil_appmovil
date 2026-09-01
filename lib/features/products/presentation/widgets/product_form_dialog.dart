@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/product.dart';
 import '../providers/products_providers.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductEntity? product;
+  final String? initialSku;
 
-  const ProductFormDialog({super.key, this.product});
+  const ProductFormDialog({super.key, this.product, this.initialSku});
 
   @override
   ConsumerState<ProductFormDialog> createState() => _ProductFormDialogState();
@@ -26,6 +28,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   
   int? _selectedCategoryId;
   bool _isActive = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -37,7 +40,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _sellingPriceController = TextEditingController(text: p != null ? p.sellingPrice.toStringAsFixed(2) : '');
     _stockController = TextEditingController(text: p != null ? p.stock.toString() : '0');
     _minStockController = TextEditingController(text: p != null ? p.minStock.toString() : '5');
-    _skuController = TextEditingController(text: p?.sku ?? '');
+    _skuController = TextEditingController(text: p?.sku ?? widget.initialSku ?? '');
     _selectedCategoryId = p?.categoryId;
     _isActive = p?.isActive ?? true;
   }
@@ -60,7 +63,29 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     final isEdit = widget.product != null;
 
     return AlertDialog(
-      title: Text(isEdit ? 'Editar Producto' : 'Nuevo Producto', style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isEdit ? Icons.edit_note_rounded : Icons.add_box_rounded,
+              color: AppTheme.primaryColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            isEdit ? 'Editar Producto' : 'Nuevo Producto',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurfaceColor),
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -75,8 +100,6 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               const SizedBox(height: 12),
               categoriesAsync.when(
                 data: (list) {
-                  // Si no hay categoría seleccionada, pero la lista no está vacía y es edición, intentamos asignar.
-                  // De lo contrario dejamos null.
                   return DropdownButtonFormField<int>(
                     value: _selectedCategoryId,
                     decoration: const InputDecoration(labelText: 'Categoría'),
@@ -84,7 +107,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                     onChanged: (val) => setState(() => _selectedCategoryId = val),
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
                 error: (e, s) => const Text('Error cargando categorías'),
               ),
               const SizedBox(height: 12),
@@ -112,9 +135,6 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) return 'Requerido';
                         if (double.tryParse(val) == null) return 'Inválido';
-                        final purchase = double.tryParse(_purchasePriceController.text) ?? 0;
-                        final selling = double.tryParse(val) ?? 0;
-                        if (selling < purchase) return 'P. Venta < P. Compra';
                         return null;
                       },
                     ),
@@ -128,7 +148,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _stockController,
-                      decoration: const InputDecoration(labelText: 'Stock Actual *'),
+                      decoration: const InputDecoration(labelText: 'Stock Inicial *'),
                       keyboardType: TextInputType.number,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) return 'Requerido';
@@ -141,13 +161,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _minStockController,
-                      decoration: const InputDecoration(labelText: 'Stock Mínimo *'),
+                      decoration: const InputDecoration(labelText: 'Stock Mínimo'),
                       keyboardType: TextInputType.number,
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Requerido';
-                        if (int.tryParse(val) == null) return 'Inválido';
-                        return null;
-                      },
                     ),
                   ),
                 ],
@@ -156,25 +171,34 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               TextFormField(
                 controller: _skuController,
                 decoration: InputDecoration(
-                  labelText: 'Código / SKU (opcional)',
+                  labelText: 'Código / SKU / Barras',
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.qr_code_scanner, color: Colors.teal),
-                    tooltip: 'Escanear código',
-                    onPressed: _scanBarcode,
+                    icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor),
+                    tooltip: 'Escanear Código de Barras',
+                    onPressed: () async {
+                      final scanned = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) => const BarcodeScannerDialog(title: 'Escanear SKU'),
+                      );
+                      if (scanned != null && scanned.isNotEmpty) {
+                        setState(() => _skuController.text = scanned);
+                      }
+                    },
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                decoration: const InputDecoration(labelText: 'Descripción / Notas (Opcional)'),
                 maxLines: 2,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               SwitchListTile(
-                title: const Text('Producto Activo'),
                 contentPadding: EdgeInsets.zero,
+                title: const Text('Producto Activo para Venta', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 value: _isActive,
+                activeTrackColor: AppTheme.primaryColor,
                 onChanged: (val) => setState(() => _isActive = val),
               ),
             ],
@@ -182,74 +206,94 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         ),
       ),
       actions: [
+        if (isEdit)
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            onPressed: () => _confirmDelete(context, widget.product!),
+            child: const Text('Eliminar'),
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: const Text('Cancelar', style: TextStyle(color: AppTheme.onSurfaceVariantColor)),
         ),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(minimumSize: const Size(100, 45)),
-          onPressed: _save,
-          child: const Text('Guardar'),
+          onPressed: _isSaving ? null : () => _saveProduct(context),
+          child: _isSaving
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Text(isEdit ? 'Actualizar' : 'Guardar'),
         ),
       ],
     );
   }
 
-  void _scanBarcode() async {
-    final scanned = await showDialog<String>(
-      context: context,
-      builder: (ctx) => const BarcodeScannerDialog(title: 'Escanear Código del Producto'),
-    );
-    if (scanned != null && mounted) {
-      setState(() {
-        _skuController.text = scanned;
-      });
+  void _saveProduct(BuildContext context) async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isSaving = true);
+      final isEdit = widget.product != null;
+      
+      final product = ProductEntity(
+        id: isEdit ? widget.product!.id : 0,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        purchasePrice: double.parse(_purchasePriceController.text.trim()),
+        sellingPrice: double.parse(_sellingPriceController.text.trim()),
+        stock: int.parse(_stockController.text.trim()),
+        minStock: int.tryParse(_minStockController.text.trim()) ?? 5,
+        sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
+        categoryId: _selectedCategoryId,
+        isActive: _isActive,
+        createdAt: isEdit ? widget.product!.createdAt : DateTime.now(),
+      );
+
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+
+      try {
+        if (isEdit) {
+          await ref.read(updateProductUseCaseProvider).call(product);
+        } else {
+          await ref.read(addProductUseCaseProvider).call(product);
+        }
+        ref.invalidate(productsListProvider);
+        navigator.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(isEdit ? 'Producto actualizado' : 'Producto guardado con éxito'),
+            backgroundColor: AppTheme.secondaryColor,
+          ),
+        );
+      } catch (e) {
+        setState(() => _isSaving = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     }
   }
 
-  void _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
-    final newProduct = ProductEntity(
-      id: widget.product?.id ?? 0,
-      categoryId: _selectedCategoryId,
-      name: _nameController.text.trim(),
-      description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-      purchasePrice: double.parse(_purchasePriceController.text),
-      sellingPrice: double.parse(_sellingPriceController.text),
-      stock: int.parse(_stockController.text),
-      minStock: int.parse(_minStockController.text),
-      sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
-      isActive: _isActive,
-      createdAt: widget.product?.createdAt ?? DateTime.now(),
+  void _confirmDelete(BuildContext context, ProductEntity product) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar producto?'),
+        content: Text('¿Estás seguro de que deseas eliminar "${product.name}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor, foregroundColor: Colors.white),
+            onPressed: () async {
+              await ref.read(deleteProductUseCaseProvider).call(product.id);
+              ref.invalidate(productsListProvider);
+              if (ctx.mounted) Navigator.pop(ctx); // Cierra confirmación
+              if (context.mounted) Navigator.pop(context); // Cierra formulario
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
-
-    try {
-      if (widget.product != null) {
-        await ref.read(productsListProvider.notifier).updateProduct(newProduct);
-      } else {
-        await ref.read(productsListProvider.notifier).addProduct(newProduct);
-      }
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Producto "${newProduct.name}" guardado correctamente.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      if (navigator.canPop()) {
-        navigator.pop();
-      }
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar el producto: $e'),
-          backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    }
   }
 }

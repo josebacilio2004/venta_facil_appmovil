@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
-import '../../../../core/widgets/glass_background.dart';
-import '../../../../core/widgets/glass_card.dart';
-import '../../../sales/presentation/providers/sales_providers.dart';
+import '../../../../core/widgets/fintech_card.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../providers/dashboard_providers.dart';
 import '../../../products/domain/entities/product.dart';
 import '../../../sales/domain/entities/sale.dart';
@@ -16,198 +16,157 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
+    final settings = ref.watch(settingsNotifierProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'VENTAFÁCIL - PANEL',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-        ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surfaceColor,
         elevation: 0,
-        centerTitle: true,
-      ),
-      body: GlassBackground(
-        child: SafeArea(
-          child: statsAsync.when(
-            data: (stats) => RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(dashboardStatsProvider);
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  _buildBusinessBanner(context),
-                  const SizedBox(height: 20),
-                  _buildStatsGrid(context, stats),
-                  const SizedBox(height: 20),
-                  if (stats.lowStockProducts.isNotEmpty) ...[
-                    _buildLowStockAlert(context, stats.lowStockProducts),
-                    const SizedBox(height: 20),
-                  ],
-                  _buildLatestSalesList(context, ref, stats.latestSales),
-                  const SizedBox(height: 20),
-                ],
+        scrolledUnderElevation: 0,
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primaryColor, AppTheme.primaryContainerColor],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'VentaFácil',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+                fontSize: 20,
+                letterSpacing: -0.5,
               ),
             ),
-            loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-            error: (err, _) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Error: $err', style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.teal),
-                    onPressed: () => ref.invalidate(dashboardStatsProvider),
-                    child: const Text('Reintentar'),
-                  )
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBusinessBanner(BuildContext context) {
-    return const GlassCard(
-      opacity: 0.12,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '¡Bienvenido!',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.onSurfaceColor),
+            onPressed: () {},
           ),
-          SizedBox(height: 6),
-          Text(
-            'Controla tu inventario y ventas de forma rápida y sencilla.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: AppTheme.surfaceContainerLow,
+              child: Icon(Icons.person_rounded, color: AppTheme.primaryColor, size: 22),
             ),
           ),
         ],
       ),
+      body: statsAsync.when(
+        data: (stats) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(dashboardStatsProvider);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 90.0),
+            children: [
+              // Greeting & Business Name
+              _buildHeaderGreeting(settings.businessName),
+              const SizedBox(height: 18),
+
+              // Hero Card: Ventas de hoy
+              _buildHeroSalesCard(context, stats.salesToday),
+              const SizedBox(height: 16),
+
+              // Secondary Stats Stack (Bento Grid)
+              _buildSecondaryStatsStack(context, stats),
+              const SizedBox(height: 24),
+
+              // Stock bajo (si hay alertas)
+              if (stats.lowStockProducts.isNotEmpty) ...[
+                _buildLowStockSection(context, stats.lowStockProducts),
+                const SizedBox(height: 24),
+              ],
+
+              // Últimas Ventas List
+              _buildLatestSalesSection(context, stats.latestSales),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+        error: (err, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $err', style: const TextStyle(color: AppTheme.errorColor)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(dashboardStatsProvider),
+                child: const Text('Reintentar'),
+              )
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.primaryContainerColor,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.add_shopping_cart_rounded),
+        label: const Text('Registrar Venta', style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+        onPressed: () => context.go('/sales'),
+      ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, DashboardStats stats) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.35,
+  Widget _buildHeaderGreeting(String businessName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildStatCard(
-          context,
-          title: 'Ventas de Hoy',
-          value: CurrencyFormatter.format(stats.salesToday),
-          icon: Icons.today,
-          iconColor: Colors.tealAccent,
+        const Text(
+          'Buenos días 👋',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.onSurfaceVariantColor,
+          ),
         ),
-        _buildStatCard(
-          context,
-          title: 'Ventas del Mes',
-          value: CurrencyFormatter.format(stats.salesMonth),
-          icon: Icons.calendar_month,
-          iconColor: Colors.blueAccent,
-        ),
-        _buildStatCard(
-          context,
-          title: 'Ganancia Estimada',
-          value: CurrencyFormatter.format(stats.estimatedProfit),
-          icon: Icons.trending_up,
-          iconColor: Colors.greenAccent,
-        ),
-        _buildStatCard(
-          context,
-          title: 'Prod. Vendidos',
-          value: '${stats.productsSold} und',
-          icon: Icons.shopping_basket,
-          iconColor: Colors.orangeAccent,
+        const SizedBox(height: 2),
+        Text(
+          businessName,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.onSurfaceColor,
+            letterSpacing: -0.5,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color iconColor,
-  }) {
-    return GlassCard(
-      padding: const EdgeInsets.all(14.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(icon, color: iconColor, size: 24),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+  Widget _buildHeroSalesCard(BuildContext context, double todaySales) {
+    return Container(
+      padding: const EdgeInsets.all(22.0),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryColor, AppTheme.primaryContainerColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryContainerColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLowStockAlert(BuildContext context, List<ProductEntity> list) {
-    return GlassCard(
-      color: Colors.orange,
-      opacity: 0.15,
-      padding: EdgeInsets.zero,
-      child: ListTile(
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16.0),
-          child: Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 36),
-        ),
-        title: Text(
-          'Alertas de Inventario (${list.length})',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orangeAccent),
-        ),
-        subtitle: const Text(
-          'Tienes productos con stock bajo o agotados.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        trailing: const Padding(
-          padding: EdgeInsets.only(right: 16.0),
-          child: Icon(Icons.chevron_right, color: Colors.orangeAccent),
-        ),
-        onTap: () {
-          context.go('/products');
-        },
-      ),
-    );
-  }
-
-  Widget _buildLatestSalesList(BuildContext context, WidgetRef ref, List<SaleEntity> sales) {
-    return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -215,124 +174,283 @@ class DashboardPage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Últimas Ventas',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                'Ventas de hoy',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              TextButton(
-                onPressed: () {
-                  context.push('/reports');
-                },
-                child: const Text('Ver Reportes', style: TextStyle(color: Colors.cyanAccent)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor,
+                  borderRadius: BorderRadius.circular(9999),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.trending_up_rounded, color: Colors.white, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'Activo hoy',
+                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const Divider(color: Colors.white24),
-          if (sales.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20.0),
-              child: Center(child: Text('No hay ventas registradas.', style: TextStyle(color: Colors.white70))),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: sales.length,
-              itemBuilder: (context, index) {
-                final sale = sales[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.12),
-                    child: const Icon(Icons.receipt, color: Colors.white),
-                  ),
-                  title: Text(
-                    sale.customerName ?? 'Cliente Anónimo',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    '${DateFormatter.formatWithTime(sale.date)} • ${sale.paymentMethod.toUpperCase()}',
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                  trailing: Text(
-                    CurrencyFormatter.format(sale.total),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                  ),
-                  onTap: () => _showSaleDetails(context, ref, sale),
-                );
-              },
+          const SizedBox(height: 14),
+          Text(
+            CurrencyFormatter.format(todaySales),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
+          ),
         ],
       ),
     );
   }
 
-  void _showSaleDetails(BuildContext context, WidgetRef ref, SaleEntity sale) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.white)),
-    );
-
-    try {
-      final items = await ref.read(getSaleItemsUseCaseProvider).call(sale.id);
-      if (context.mounted) {
-        Navigator.pop(context);
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0F766E),
-            title: Text('Detalle de Venta #${sale.id}', style: const TextStyle(color: Colors.white)),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: Column(
+  Widget _buildSecondaryStatsStack(BuildContext context, DashboardStats stats) {
+    return Column(
+      children: [
+        // 1. Ganancia
+        FintechCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Cliente: ${sale.customerName ?? 'Anónimo'}', style: const TextStyle(color: Colors.white)),
-                  Text('Fecha: ${DateFormatter.formatWithTime(sale.date)}', style: const TextStyle(color: Colors.white70)),
-                  Text('Pago: ${sale.paymentMethod.toUpperCase()}', style: const TextStyle(color: Colors.white70)),
-                  if (sale.discount > 0)
-                    Text('Descuento: ${CurrencyFormatter.format(sale.discount)}', style: const TextStyle(color: Colors.redAccent)),
-                  const Divider(color: Colors.white24),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: items.length,
-                      itemBuilder: (c, idx) {
-                        final item = items[idx];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(item.productName, style: const TextStyle(color: Colors.white)),
-                          subtitle: Text('${item.quantity} x ${CurrencyFormatter.format(item.unitSellingPrice)}', style: const TextStyle(color: Colors.white70)),
-                          trailing: Text(CurrencyFormatter.format(item.subtotal), style: const TextStyle(color: Colors.white)),
-                        );
-                      },
-                    ),
+                  const Text(
+                    'Ganancia Estimada',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.onSurfaceVariantColor),
                   ),
-                  const Divider(color: Colors.white24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total Venta:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                      Text(CurrencyFormatter.format(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.tealAccent)),
-                    ],
+                  const SizedBox(height: 2),
+                  Text(
+                    CurrencyFormatter.format(stats.estimatedProfit),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor),
                   ),
                 ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cerrar', style: TextStyle(color: Colors.white70)),
+              const CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.surfaceContainerLow,
+                child: Icon(Icons.payments_rounded, color: AppTheme.primaryColor, size: 22),
               ),
             ],
           ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
+        ),
+        const SizedBox(height: 10),
+
+        // 2. Productos Vendidos
+        FintechCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Productos Vendidos Hoy',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.onSurfaceVariantColor),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${stats.productsSold} unid.',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor),
+                  ),
+                ],
+              ),
+              const CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.surfaceContainerLow,
+                child: Icon(Icons.shopping_bag_rounded, color: AppTheme.primaryColor, size: 22),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // 3. Gastos del Día
+        FintechCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Gastos Operativos',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.onSurfaceVariantColor),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    CurrencyFormatter.format(stats.todayExpenses),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.errorColor),
+                  ),
+                ],
+              ),
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.errorContainerColor.withValues(alpha: 0.6),
+                child: const Icon(Icons.schedule_rounded, color: AppTheme.errorColor, size: 22),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLowStockSection(BuildContext context, List<ProductEntity> lowStockProducts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Stock bajo',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+        ),
+        const SizedBox(height: 10),
+        FintechCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: lowStockProducts.take(3).map((p) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.inventory_2_outlined, color: AppTheme.outlineColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.onSurfaceColor)),
+                          Text(p.description ?? 'Producto', style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.tertiaryContainerColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 14, color: AppTheme.tertiaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${p.stock} unid.',
+                            style: const TextStyle(color: AppTheme.tertiaryColor, fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLatestSalesSection(BuildContext context, List<SaleEntity> latestSales) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Últimas ventas',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor),
+            ),
+            GestureDetector(
+              onTap: () => context.go('/sales'),
+              child: const Text(
+                'Ver todas',
+                style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (latestSales.isEmpty)
+          const FintechCard(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'No hay ventas registradas hoy.',
+                style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 13),
+              ),
+            ),
+          )
+        else
+          FintechCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: latestSales.take(4).map((sale) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppTheme.outlineVariantColor, width: 0.8)),
+                  ),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppTheme.surfaceContainerLow,
+                        child: Icon(Icons.receipt_rounded, color: AppTheme.primaryColor, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Venta #${sale.id.toString().padLeft(4, '0')}',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.onSurfaceColor),
+                            ),
+                            Text(
+                              '${DateFormatter.formatWithTime(sale.date)} • ${sale.paymentMethod.toUpperCase()}',
+                              style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariantColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(sale.total),
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.onSurfaceColor),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
   }
 }

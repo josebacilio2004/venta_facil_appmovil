@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
-import '../../../../core/widgets/glass_card.dart';
+import '../../../../core/widgets/fintech_card.dart';
 import '../../../products/presentation/providers/products_providers.dart';
 import '../../../products/domain/entities/product.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
@@ -37,30 +38,34 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
-          title: const Text(
-            'REGISTRAR VENTA',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-          ),
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppTheme.surfaceColor,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          title: const Text(
+            'Registrar Venta',
+            style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor, fontSize: 20),
+          ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.receipt_long, color: Colors.tealAccent),
+              icon: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),
               tooltip: 'Ver Último Ticket / Comprobante',
-              onPressed: () => _openLatestReceipt(context),
+              onPressed: () => _openLatestReceipt(),
             ),
+            const SizedBox(width: 8),
           ],
           bottom: TabBar(
-            labelColor: Colors.tealAccent,
-            unselectedLabelColor: Colors.white60,
-            indicatorColor: Colors.tealAccent,
+            labelColor: AppTheme.primaryColor,
+            unselectedLabelColor: AppTheme.outlineColor,
+            indicatorColor: AppTheme.primaryColor,
             indicatorWeight: 3,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
             tabs: [
-              const Tab(icon: Icon(Icons.search), text: '1. Productos'),
+              const Tab(icon: Icon(Icons.search_rounded, size: 20), text: '1. Productos'),
               Tab(
-                icon: const Icon(Icons.shopping_cart),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 20),
                 text: '2. Carrito (${cart.items.fold(0, (sum, i) => sum + i.quantity)})',
               ),
             ],
@@ -72,48 +77,37 @@ class _SalesPageState extends ConsumerState<SalesPage> {
             Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                  child: GlassCard(
-                    padding: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(16),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Buscar por nombre o escanear SKU...',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_searchQuery.isNotEmpty)
-                              IconButton(
-                                icon: const Icon(Icons.clear, color: Colors.white70),
-                                onPressed: () {
-                                  setState(() => _searchQuery = '');
-                                  _searchController.clear();
-                                  ref.read(productsFilterProvider.notifier).state = productsFilter.copyWith(query: '');
-                                },
-                              ),
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre o escanear SKU...',
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.outlineColor, size: 20),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_searchQuery.isNotEmpty)
                             IconButton(
-                              icon: const Icon(Icons.qr_code_scanner, color: Colors.tealAccent),
-                              tooltip: 'Escanear producto al carrito',
-                              onPressed: () => _scanProductToCart(context),
+                              icon: const Icon(Icons.clear, color: AppTheme.outlineColor, size: 18),
+                              onPressed: () {
+                                setState(() => _searchQuery = '');
+                                _searchController.clear();
+                                ref.read(productsFilterProvider.notifier).state = productsFilter.copyWith(query: '');
+                              },
                             ),
-                          ],
-                        ),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          IconButton(
+                            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor),
+                            tooltip: 'Escanear producto al carrito',
+                            onPressed: () => _scanProductToCart(context),
+                          ),
+                        ],
                       ),
-                      onChanged: (val) {
-                        setState(() => _searchQuery = val.trim());
-                        ref.read(productsFilterProvider.notifier).state = productsFilter.copyWith(query: val.trim());
-                      },
                     ),
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val.trim());
+                      ref.read(productsFilterProvider.notifier).state = productsFilter.copyWith(query: val.trim());
+                    },
                   ),
                 ),
                 Expanded(
@@ -121,21 +115,36 @@ class _SalesPageState extends ConsumerState<SalesPage> {
                     data: (products) {
                       final sellable = products.where((p) => p.isActive).toList();
                       if (sellable.isEmpty) {
-                        return const Center(
-                          child: Text('No hay productos disponibles para la venta.', style: TextStyle(color: Colors.white70)),
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.surfaceContainerLow,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.inventory_2_outlined, color: AppTheme.outlineColor, size: 28),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text('No hay productos disponibles para la venta.', style: TextStyle(color: AppTheme.onSurfaceVariantColor, fontSize: 14)),
+                            ],
+                          ),
                         );
                       }
                       return ListView.builder(
                         itemCount: sellable.length,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
                         itemBuilder: (context, index) {
                           final product = sellable[index];
                           return _buildSellProductRow(context, ref, product, cart);
                         },
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-                    error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+                    loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+                    error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppTheme.errorColor))),
                   ),
                 ),
               ],
@@ -154,26 +163,36 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     final inCartQty = cartItemIndex >= 0 ? cart.items[cartItemIndex].quantity : 0;
     final availableStock = p.stock - inCartQty;
 
-    return GlassCard(
+    return FintechCard(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+      padding: const EdgeInsets.all(12.0),
       child: Row(
         children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.inventory_2_outlined, color: AppTheme.primaryColor, size: 22),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                const SizedBox(height: 4),
+                Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurfaceColor)),
+                const SizedBox(height: 2),
                 Text(
-                  'Precio: ${CurrencyFormatter.format(p.sellingPrice)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent, fontSize: 14),
+                  CurrencyFormatter.format(p.sellingPrice),
+                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primaryColor, fontSize: 14),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Stock Disp: $availableStock',
                   style: TextStyle(
-                    color: availableStock <= 0 ? Colors.redAccent : (availableStock <= p.minStock ? Colors.orangeAccent : Colors.white60),
+                    color: availableStock <= 0 ? AppTheme.errorColor : (availableStock <= p.minStock ? AppTheme.tertiaryColor : AppTheme.onSurfaceVariantColor),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -185,13 +204,13 @@ class _SalesPageState extends ConsumerState<SalesPage> {
             children: [
               if (inCartQty > 0) ...[
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 28),
+                  icon: const Icon(Icons.remove_circle_outline_rounded, color: AppTheme.errorColor, size: 26),
                   onPressed: () => ref.read(cartProvider.notifier).updateQuantity(p.id, inCartQty - 1),
                 ),
-                Text('$inCartQty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                Text('$inCartQty', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.onSurfaceColor)),
               ],
               IconButton(
-                icon: const Icon(Icons.add_circle, color: Colors.tealAccent, size: 32),
+                icon: const Icon(Icons.add_circle_rounded, color: AppTheme.primaryContainerColor, size: 30),
                 onPressed: availableStock > 0
                     ? () => ref.read(cartProvider.notifier).addItem(p)
                     : null,
@@ -205,15 +224,23 @@ class _SalesPageState extends ConsumerState<SalesPage> {
 
   Widget _buildCartTab(BuildContext context, WidgetRef ref, CartState cart) {
     if (cart.items.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.white30),
-            SizedBox(height: 16),
-            Text('El carrito está vacío', style: TextStyle(fontSize: 18, color: Colors.white70)),
-            SizedBox(height: 8),
-            Text('Agrega productos desde la pestaña "1. Productos"', style: TextStyle(fontSize: 13, color: Colors.white38)),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceContainerLow,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shopping_cart_outlined, size: 36, color: AppTheme.outlineColor),
+            ),
+            const SizedBox(height: 16),
+            const Text('El carrito está vacío', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor)),
+            const SizedBox(height: 4),
+            const Text('Agrega productos desde la pestaña "1. Productos"', style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariantColor)),
           ],
         ),
       );
@@ -224,10 +251,10 @@ class _SalesPageState extends ConsumerState<SalesPage> {
         Expanded(
           child: ListView.builder(
             itemCount: cart.items.length,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             itemBuilder: (context, index) {
               final item = cart.items[index];
-              return GlassCard(
+              return FintechCard(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
@@ -236,11 +263,11 @@ class _SalesPageState extends ConsumerState<SalesPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurfaceColor)),
                           const SizedBox(height: 4),
                           Text(
                             '${item.quantity} x ${CurrencyFormatter.format(item.product.sellingPrice)} = ${CurrencyFormatter.format(item.subtotal)}',
-                            style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.w600, fontSize: 13),
+                            style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ],
                       ),
@@ -248,17 +275,17 @@ class _SalesPageState extends ConsumerState<SalesPage> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.remove, color: Colors.white70),
+                          icon: const Icon(Icons.remove_rounded, color: AppTheme.onSurfaceVariantColor, size: 20),
                           onPressed: () => ref.read(cartProvider.notifier).updateQuantity(item.product.id, item.quantity - 1),
                         ),
-                        Text('${item.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text('${item.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceColor)),
                         IconButton(
-                          icon: const Icon(Icons.add, color: Colors.white70),
+                          icon: const Icon(Icons.add_rounded, color: AppTheme.onSurfaceVariantColor, size: 20),
                           onPressed: () => ref.read(cartProvider.notifier).updateQuantity(item.product.id, item.quantity + 1),
                         ),
                         const SizedBox(width: 4),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 20),
                           onPressed: () => ref.read(cartProvider.notifier).removeItem(item.product.id),
                         ),
                       ],
@@ -269,53 +296,56 @@ class _SalesPageState extends ConsumerState<SalesPage> {
             },
           ),
         ),
-        GlassCard(
-          margin: const EdgeInsets.all(16),
+        Container(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total a Cobrar:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  Text(
-                    CurrencyFormatter.format(cart.total),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.tealAccent),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => _confirmClearCart(context, ref),
-                      child: const Text('Vaciar Carrito'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.tealAccent,
-                        foregroundColor: Colors.black,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => _openCheckout(context),
-                      child: const Text('Cobrar / Pagar', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppTheme.outlineVariantColor, width: 1)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 16,
+                offset: Offset(0, -4),
               ),
             ],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total a Cobrar:', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceColor)),
+                    Text(
+                      CurrencyFormatter.format(cart.total),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.primaryColor, letterSpacing: -0.5),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _confirmClearCart(context, ref),
+                        child: const Text('Vaciar Carrito'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryContainerColor,
+                        ),
+                        onPressed: () => _openCheckout(context),
+                        child: const Text('Cobrar / Pagar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -356,7 +386,7 @@ class _SalesPageState extends ConsumerState<SalesPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text('"${found.name}" agregado al carrito (+1)'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.secondaryColor,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -364,7 +394,7 @@ class _SalesPageState extends ConsumerState<SalesPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text('"${found.name}" está agotado (Stock: 0)'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -372,19 +402,19 @@ class _SalesPageState extends ConsumerState<SalesPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Código "$scannedCode" no encontrado.'),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: AppTheme.tertiaryColor,
         ),
       );
     }
   }
 
-  void _openLatestReceipt(BuildContext context) async {
+  void _openLatestReceipt() async {
     final messenger = ScaffoldMessenger.of(context);
     final sales = await ref.read(salesListProvider.future);
     if (sales.isEmpty) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('No hay comprobantes de venta registrados aún.'), backgroundColor: Colors.teal),
+        const SnackBar(content: Text('No hay comprobantes de venta registrados aún.'), backgroundColor: AppTheme.primaryColor),
       );
       return;
     }
@@ -439,13 +469,12 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F766E),
-        title: const Text('¿Vaciar Carrito?', style: TextStyle(color: Colors.white)),
-        content: const Text('¿Estás seguro de que deseas vaciar todos los productos del carrito?', style: TextStyle(color: Colors.white70)),
+        title: const Text('¿Vaciar Carrito?'),
+        content: const Text('¿Estás seguro de que deseas vaciar todos los productos del carrito?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar', style: TextStyle(color: Colors.white70))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor, foregroundColor: Colors.white),
             onPressed: () {
               ref.read(cartProvider.notifier).clearCart();
               Navigator.pop(ctx);

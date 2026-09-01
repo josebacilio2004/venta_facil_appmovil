@@ -25,6 +25,34 @@ class ProductEntity {
     required this.createdAt,
   });
 
+  ProductEntity copyWith({
+    int? id,
+    int? categoryId,
+    String? name,
+    String? description,
+    double? purchasePrice,
+    double? sellingPrice,
+    int? stock,
+    int? minStock,
+    String? sku,
+    bool? isActive,
+    DateTime? createdAt,
+  }) {
+    return ProductEntity(
+      id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      sellingPrice: sellingPrice ?? this.sellingPrice,
+      stock: stock ?? this.stock,
+      minStock: minStock ?? this.minStock,
+      sku: sku ?? this.sku,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   double get unitProfit => sellingPrice - purchasePrice;
   bool get isLowStock => stock <= minStock;
   bool get isOutOfStock => stock <= 0;

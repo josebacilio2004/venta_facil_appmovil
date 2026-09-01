@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../products/presentation/providers/products_providers.dart';
 import '../../../sales/presentation/providers/sales_providers.dart';
+import '../../../expenses/presentation/providers/expenses_providers.dart';
 import '../../../products/domain/entities/product.dart';
 import '../../../sales/domain/entities/sale.dart';
 
@@ -9,6 +10,7 @@ class DashboardStats {
   final double salesWeek;
   final double salesMonth;
   final double estimatedProfit;
+  final double todayExpenses;
   final int productsSold;
   final List<ProductEntity> lowStockProducts;
   final List<SaleEntity> latestSales;
@@ -18,6 +20,7 @@ class DashboardStats {
     required this.salesWeek,
     required this.salesMonth,
     required this.estimatedProfit,
+    required this.todayExpenses,
     required this.productsSold,
     required this.lowStockProducts,
     required this.latestSales,
@@ -27,6 +30,7 @@ class DashboardStats {
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   final sales = await ref.watch(salesListProvider.future);
   final products = await ref.watch(productsListProvider.future);
+  final expenses = await ref.watch(expensesListProvider.future);
   
   final now = DateTime.now();
   final startOfToday = DateTime(now.year, now.month, now.day);
@@ -63,6 +67,13 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
     totalProfit -= s.discount;
   }
 
+  double todayExpenses = 0.0;
+  for (final e in expenses) {
+    if (e.date.isAfter(startOfToday)) {
+      todayExpenses += e.amount;
+    }
+  }
+
   final lowStock = products.where((p) => p.isLowStock && p.isActive).toList();
   final latestSales = sales.take(5).toList();
 
@@ -71,6 +82,7 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
     salesWeek: salesWeek,
     salesMonth: salesMonth,
     estimatedProfit: totalProfit,
+    todayExpenses: todayExpenses,
     productsSold: productsSold,
     lowStockProducts: lowStock,
     latestSales: latestSales,

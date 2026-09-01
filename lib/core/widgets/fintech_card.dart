@@ -1,43 +1,34 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class GlassCard extends StatelessWidget {
+class FintechCard extends StatelessWidget {
   final Widget child;
-  final double blur;
-  final double opacity;
-  final Color color;
-  final BorderRadius borderRadius;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final BorderRadius? borderRadius;
+  final Color? color;
   final Border? border;
-  final double? width;
-  final double? height;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
 
-  const GlassCard({
+  const FintechCard({
     required this.child,
-    this.blur = 0,
-    this.opacity = 1.0,
-    this.color = Colors.white,
-    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
-    this.border,
-    this.width,
-    this.height,
     this.padding = const EdgeInsets.all(16),
-    this.margin,
+    this.margin = EdgeInsets.zero,
+    this.borderRadius,
+    this.color,
+    this.border,
     this.onTap,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
-      width: width,
-      height: height,
+    final effectiveRadius = borderRadius ?? BorderRadius.circular(16);
+    final cardContent = Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: borderRadius,
+        color: color ?? AppTheme.surfaceCardColor,
+        borderRadius: effectiveRadius,
         border: border ?? Border.all(color: AppTheme.outlineVariantColor, width: 1),
         boxShadow: [
           BoxShadow(
@@ -48,9 +39,9 @@ class GlassCard extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: borderRadius,
+        borderRadius: effectiveRadius,
         child: Padding(
-          padding: padding ?? const EdgeInsets.all(16),
+          padding: padding,
           child: child,
         ),
       ),
@@ -61,12 +52,12 @@ class GlassCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: borderRadius,
-          child: card,
+          borderRadius: effectiveRadius,
+          child: cardContent,
         ),
       );
     }
 
-    return card;
+    return cardContent;
   }
 }

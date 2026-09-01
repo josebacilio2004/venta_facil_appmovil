@@ -62,8 +62,6 @@ final deleteCategoryUseCaseProvider = Provider<DeleteCategoryUseCase>((ref) {
   return DeleteCategoryUseCase(ref.watch(categoriesRepositoryProvider));
 });
 
-// Controllers / Notifiers
-
 // Categories Notifier
 class CategoriesListNotifier extends AsyncNotifier<List<CategoryEntity>> {
   @override
@@ -71,11 +69,17 @@ class CategoriesListNotifier extends AsyncNotifier<List<CategoryEntity>> {
     return ref.watch(getCategoriesUseCaseProvider).call();
   }
 
-  Future<void> addCategory(String name, String? description) async {
+  Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final useCase = ref.read(addCategoryUseCaseProvider);
-      await useCase.call(CategoryEntity(id: 0, name: name, description: description));
+      return ref.read(getCategoriesUseCaseProvider).call();
+    });
+  }
+
+  Future<void> addCategory(String name) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(addCategoryUseCaseProvider).call(CategoryEntity(id: 0, name: name));
       return ref.read(getCategoriesUseCaseProvider).call();
     });
   }
@@ -97,13 +101,15 @@ final categoriesListProvider = AsyncNotifierProvider<CategoriesListNotifier, Lis
 class ProductsFilter {
   final String query;
   final int? categoryId;
+  final bool? onlyLowStock;
 
-  const ProductsFilter({this.query = '', this.categoryId});
+  const ProductsFilter({this.query = '', this.categoryId, this.onlyLowStock});
 
-  ProductsFilter copyWith({String? query, int? categoryId, bool clearCategory = false}) {
+  ProductsFilter copyWith({String? query, int? categoryId, bool clearCategory = false, bool? onlyLowStock}) {
     return ProductsFilter(
       query: query ?? this.query,
       categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+      onlyLowStock: onlyLowStock ?? this.onlyLowStock,
     );
   }
 }
@@ -115,20 +121,28 @@ class ProductsListNotifier extends AsyncNotifier<List<ProductEntity>> {
   @override
   Future<List<ProductEntity>> build() async {
     final filter = ref.watch(productsFilterProvider);
-    return ref.watch(getProductsUseCaseProvider).call(
+    final list = await ref.watch(getProductsUseCaseProvider).call(
       query: filter.query,
       categoryId: filter.categoryId,
     );
+    if (filter.onlyLowStock == true) {
+      return list.where((p) => p.isLowStock).toList();
+    }
+    return list;
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final filter = ref.read(productsFilterProvider);
-      return ref.read(getProductsUseCaseProvider).call(
+      final list = await ref.read(getProductsUseCaseProvider).call(
         query: filter.query,
         categoryId: filter.categoryId,
       );
+      if (filter.onlyLowStock == true) {
+        return list.where((p) => p.isLowStock).toList();
+      }
+      return list;
     });
   }
 
@@ -137,10 +151,14 @@ class ProductsListNotifier extends AsyncNotifier<List<ProductEntity>> {
     state = await AsyncValue.guard(() async {
       await ref.read(addProductUseCaseProvider).call(product);
       final filter = ref.read(productsFilterProvider);
-      return ref.read(getProductsUseCaseProvider).call(
+      final list = await ref.read(getProductsUseCaseProvider).call(
         query: filter.query,
         categoryId: filter.categoryId,
       );
+      if (filter.onlyLowStock == true) {
+        return list.where((p) => p.isLowStock).toList();
+      }
+      return list;
     });
   }
 
@@ -149,10 +167,14 @@ class ProductsListNotifier extends AsyncNotifier<List<ProductEntity>> {
     state = await AsyncValue.guard(() async {
       await ref.read(updateProductUseCaseProvider).call(product);
       final filter = ref.read(productsFilterProvider);
-      return ref.read(getProductsUseCaseProvider).call(
+      final list = await ref.read(getProductsUseCaseProvider).call(
         query: filter.query,
         categoryId: filter.categoryId,
       );
+      if (filter.onlyLowStock == true) {
+        return list.where((p) => p.isLowStock).toList();
+      }
+      return list;
     });
   }
 
@@ -161,10 +183,14 @@ class ProductsListNotifier extends AsyncNotifier<List<ProductEntity>> {
     state = await AsyncValue.guard(() async {
       await ref.read(deleteProductUseCaseProvider).call(id);
       final filter = ref.read(productsFilterProvider);
-      return ref.read(getProductsUseCaseProvider).call(
+      final list = await ref.read(getProductsUseCaseProvider).call(
         query: filter.query,
         categoryId: filter.categoryId,
       );
+      if (filter.onlyLowStock == true) {
+        return list.where((p) => p.isLowStock).toList();
+      }
+      return list;
     });
   }
 }
