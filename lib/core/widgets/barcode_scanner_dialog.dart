@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
+import '../utils/sound_feedback.dart';
 
 class BarcodeScannerDialog extends StatefulWidget {
   final String title;
@@ -48,8 +49,7 @@ class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with Single
   void _onBarcodeDetected(String code) {
     if (_hasDetected) return;
     _hasDetected = true;
-    HapticFeedback.heavyImpact();
-    SystemSound.play(SystemSoundType.click);
+    SoundFeedback.playScannerBeep();
     Navigator.of(context).pop(code.trim());
   }
 
