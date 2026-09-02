@@ -1,134 +1,69 @@
+# Codemagic CI/CD Configuration for VentaFácil SaaS POS
 workflows:
-  android-workflow:
-    name: Android Build (APK)
+  android-ios-workflow:
+    name: Android & iOS Workflow
     max_build_duration: 60
-    instance_type: mac_mini_m2
+    instance_type: mac_mini_m1
     environment:
       flutter: stable
-      xcode: latest
-      cocoapods: default
       vars:
-        PACKAGE_NAME: "com.bacsystem.ventafacil"
+        PACKAGE_NAME: "com.ventafacil.ventafacil"
     triggering:
       events:
         - push
-        - pull_request
       branch_patterns:
         - pattern: 'main'
           include: true
-          source: true
-    scripts:
-      - name: Set up local properties
-        script: |
-          echo "flutter.sdk=$FLUTTER_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      - name: Get Flutter packages
-        script: |
-          flutter packages pub get
-      - name: Run code analyzer
-        script: |
-          flutter analyze --no-fatal-infos
-      - name: Run unit and logic tests
-        script: |
-          flutter test
-      - name: Build Android Release APK
-        script: |
-          flutter build apk --release
-      - name: Build Android App Bundle (AAB)
-        script: |
-          flutter build appbundle --release
-    artifacts:
-      - build/**/outputs/**/*.apk
-      - build/**/outputs/**/*.aab
-      - build/**/outputs/**/mapping.txt
-      - flutter_drive.log
-    publishing:
-      email:
-        recipients:
-          - josebacilio2004@gmail.com
-        notify:
-          success: true
-          failure: true
-
-  ios-workflow:
-    name: iOS Build (IPA)
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-    triggering:
-      events:
-        - push
-        - pull_request
-      branch_patterns:
-        - pattern: 'main'
-          include: true
-          source: true
-    scripts:
-      - name: Get Flutter packages
-        script: |
-          flutter packages pub get
-      - name: Install CocoaPods dependencies
-        script: |
-          find . -name "Podfile" -execdir pod install \;
-      - name: Run tests
-        script: |
-          flutter test
-      - name: Build iOS IPA (Unsigned / Release)
-        script: |
-          flutter build ipa --release --no-codesign
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/iphoneos/*.app
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
-    publishing:
-      email:
-        recipients:
-          - josebacilio2004@gmail.com
-        notify:
-          success: true
-          failure: true
-
-  full-release-workflow:
-    name: Full Release (APK & IPA)
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-    triggering:
-      events:
-        - tag
-      branch_patterns:
-        - pattern: '*'
+        - pattern: 'develop'
           include: true
     scripts:
-      - name: Get Flutter packages
+      - name: Configure Flutter and Get packages
         script: |
-          flutter packages pub get
-      - name: Install CocoaPods dependencies
-        script: |
-          find . -name "Podfile" -execdir pod install \;
-      - name: Run tests
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
+      - name: Run Tests
         script: |
           flutter test
-      - name: Build Android APK Release
+      - name: Build Android APK
         script: |
           flutter build apk --release
-      - name: Build iOS IPA Release
+      - name: Build iOS (Unsigned IPA)
         script: |
-          flutter build ipa --release --no-codesign
+          # 1. Compilar binario de iOS sin firma
+          flutter build ios --release --no-codesign
+          
+          # 2. Diagnóstico: Listar contenido de build/ios/iphoneos para verificar el compilado
+          echo "=== Contenido de build/ios/iphoneos ==="
+          ls -la build/ios/iphoneos || true
+          
+          # 3. Crear estructura Payload
+          mkdir -p build/ios/ipa/Payload
+          
+          # 4. Copiar Runner.app resolviendo enlaces simbólicos (-L)
+          echo "=== Copiando Runner.app ==="
+          cp -RL build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          
+          # 5. Diagnóstico: Verificar si se copió correctamente
+          echo "=== Contenido de Payload ==="
+          ls -la build/ios/ipa/Payload || true
+          echo "=== Contenido de Payload/Runner.app ==="
+          ls -la build/ios/ipa/Payload/Runner.app || true
+          
+          # 6. Entrar a la carpeta y comprimir de forma detallada (sin -q para ver qué se agrega)
+          echo "=== Comprimiendo a IPA ==="
+          cd build/ios/ipa
+          zip -r VentaFacil.ipa Payload
+          
+          # 7. Diagnóstico: Verificar tamaño y detalles del archivo IPA generado
+          echo "=== IPA Generado ==="
+          ls -lh VentaFacil.ipa || true
     artifacts:
-      - build/**/outputs/**/*.apk
-      - build/**/outputs/**/*.aab
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
+      - build/app/outputs/flutter-apk/*.apk
+      - build/ios/ipa/VentaFacil.ipa
     publishing:
       email:
         recipients:
+          - 74934503@continental.edu.pe
           - josebacilio2004@gmail.com
         notify:
           success: true
