@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
 
 class BarcodeScannerDialog extends StatefulWidget {
@@ -14,13 +16,22 @@ class BarcodeScannerDialog extends StatefulWidget {
 }
 
 class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  final _codeController = TextEditingController();
+  late MobileScannerController _scannerController;
+  late AnimationController _laserAnimationController;
+  final _manualCodeController = TextEditingController();
+  bool _hasDetected = false;
+  bool _isTorchOn = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+
+    _laserAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     )..repeat(reverse: true);
@@ -28,277 +39,320 @@ class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with Single
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _codeController.dispose();
+    _laserAnimationController.dispose();
+    _scannerController.dispose();
+    _manualCodeController.dispose();
     super.dispose();
+  }
+
+  void _onBarcodeDetected(String code) {
+    if (_hasDetected) return;
+    _hasDetected = true;
+    HapticFeedback.heavyImpact();
+    SystemSound.play(SystemSoundType.click);
+    Navigator.of(context).pop(code.trim());
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppTheme.outlineVariantColor, width: 1),
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
-      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(10),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 680),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
-            child: const Icon(
-              Icons.qr_code_scanner_rounded,
-              color: AppTheme.primaryColor,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              widget.title,
-              style: const TextStyle(
-                color: AppTheme.onSurfaceColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: AppTheme.onSurfaceColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: AppTheme.outlineColor, size: 22),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppTheme.outlineColor, size: 22),
-            onPressed: () => Navigator.pop(context),
-            splashRadius: 20,
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Scanner Viewport Window
-              Container(
-                width: double.infinity,
-                height: 180,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B1C30),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0050CB).withValues(alpha: 0.15),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    // Reticle Corner Guides
-                    Positioned.fill(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: CustomPaint(
-                          painter: _ScannerReticlePainter(
-                            color: AppTheme.primaryContainerColor,
-                          ),
-                        ),
-                      ),
-                    ),
 
-                    // Central Target Icon
-                    const Center(
-                      child: Icon(
-                        Icons.filter_center_focus_rounded,
-                        color: Colors.white24,
-                        size: 48,
-                      ),
-                    ),
-
-                    // Animated Laser Scanning Line
-                    AnimatedBuilder(
-                      animation: _animationController,
-                      builder: (context, child) {
-                        final topOffset = 26 + (_animationController.value * 124);
-                        return Positioned(
-                          top: topOffset,
-                          left: 30,
-                          right: 30,
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  Color(0xFF00E5FF),
-                                  Color(0xFF0066FF),
-                                  Color(0xFF00E5FF),
-                                  Colors.transparent,
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF00E5FF).withValues(alpha: 0.8),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
+            // Live Camera Viewport
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    color: const Color(0xFF0B1C30),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Cámara en Vivo
+                        MobileScanner(
+                          controller: _scannerController,
+                          onDetect: (BarcodeCapture capture) {
+                            final barcodes = capture.barcodes;
+                            for (final barcode in barcodes) {
+                              final rawValue = barcode.rawValue;
+                              if (rawValue != null && rawValue.trim().isNotEmpty) {
+                                _onBarcodeDetected(rawValue);
+                                break;
+                              }
+                            }
+                          },
+                          errorBuilder: (context, error) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 48),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Cámara no disponible o en emulador.',
+                                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      error.errorDetails?.message ?? 'Usa la entrada manual abajo',
+                                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Retícula / Guías angulares de escaneo
+                        Positioned.fill(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: CustomPaint(
+                              painter: _ScannerReticlePainter(
+                                color: AppTheme.primaryContainerColor,
+                              ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
 
-                    // Live Scan Badge
-                    Positioned(
-                      bottom: 10,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white12),
-                          ),
-                          child: const Row(
+                        // Línea Láser Animada
+                        AnimatedBuilder(
+                          animation: _laserAnimationController,
+                          builder: (context, child) {
+                            return Positioned(
+                              top: 50 + (_laserAnimationController.value * 180),
+                              left: 40,
+                              right: 40,
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Color(0xFF00E5FF),
+                                      Color(0xFF0066FF),
+                                      Color(0xFF00E5FF),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF00E5FF).withValues(alpha: 0.85),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Controles de Cámara (Linterna y Cambio de Cámara)
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.camera_alt_outlined, color: Colors.white70, size: 12),
-                              SizedBox(width: 4),
-                              Text(
-                                'Cámara Activa / Enfoque',
-                                style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                              CircleAvatar(
+                                backgroundColor: Colors.black.withValues(alpha: 0.6),
+                                radius: 18,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: Icon(
+                                    _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                    color: _isTorchOn ? Colors.amberAccent : Colors.white,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Linterna',
+                                  onPressed: () async {
+                                    await _scannerController.toggleTorch();
+                                    setState(() => _isTorchOn = !_isTorchOn);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              CircleAvatar(
+                                backgroundColor: Colors.black.withValues(alpha: 0.6),
+                                radius: 18,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white, size: 18),
+                                  tooltip: 'Cambiar Cámara',
+                                  onPressed: () => _scannerController.switchCamera(),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
 
-              // Subtitle
-              const Text(
-                'Apunta con la cámara al código de barras o ingrésalo manualmente:',
-                style: TextStyle(
-                  color: AppTheme.onSurfaceVariantColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-
-              // Manual Input Field
-              TextFormField(
-                controller: _codeController,
-                autofocus: true,
-                style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 15, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(
-                  hintText: 'Ej: 7501055310883',
-                  prefixIcon: const Icon(Icons.tag_rounded, color: AppTheme.outlineColor, size: 20),
-                  suffixIcon: Container(
-                    margin: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                      tooltip: 'Confirmar Código',
-                      onPressed: () {
-                        final code = _codeController.text.trim();
-                        if (code.isNotEmpty) {
-                          Navigator.pop(context, code);
-                        }
-                      },
+                        // Badge inferior informativo
+                        Positioned(
+                          bottom: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.center_focus_strong_rounded, color: Color(0xFF68FADD), size: 14),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Apunta al código de barras del producto',
+                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                onFieldSubmitted: (val) {
-                  final code = val.trim();
-                  if (code.isNotEmpty) {
-                    Navigator.pop(context, code);
-                  }
-                },
               ),
-              const SizedBox(height: 18),
+            ),
+            const SizedBox(height: 12),
 
-              // Quick Mock Codes Divider
-              const Row(
+            // Manual Entry Field & Quick Mock Codes
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(child: Divider(color: AppTheme.outlineVariantColor)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      'CÓDIGOS RÁPIDOS DE PRUEBA',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.onSurfaceVariantColor,
-                        letterSpacing: 0.5,
+                  TextFormField(
+                    controller: _manualCodeController,
+                    style: const TextStyle(color: AppTheme.onSurfaceColor, fontSize: 14, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      hintText: 'O ingresa el código manual (ej: 750105...)',
+                      prefixIcon: const Icon(Icons.tag_rounded, color: AppTheme.outlineColor, size: 20),
+                      suffixIcon: Container(
+                        margin: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                          tooltip: 'Confirmar Código',
+                          onPressed: () {
+                            final val = _manualCodeController.text.trim();
+                            if (val.isNotEmpty) _onBarcodeDetected(val);
+                          },
+                        ),
                       ),
                     ),
+                    onFieldSubmitted: (val) {
+                      if (val.trim().isNotEmpty) _onBarcodeDetected(val.trim());
+                    },
                   ),
-                  Expanded(child: Divider(color: AppTheme.outlineVariantColor)),
-                ],
-              ),
-              const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-              // Quick Mock Chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  _buildMockScanButton('Coca-Cola', '7501055310883'),
-                  _buildMockScanButton('Galletas Oreo', '7501001156824'),
-                  _buildMockScanButton('Papa Lay\'s', '7501011123456'),
-                  _buildMockScanButton('Gaseosa Inka', '7750123456789'),
+                  // Quick test mock chips
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _buildMockButton('Coca-Cola', '7501055310883'),
+                      _buildMockButton('Galletas Oreo', '7501001156824'),
+                      _buildMockButton('Crema Facial', '7751234567890'),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMockScanButton(String label, String code) {
+  Widget _buildMockButton(String label, String code) {
     return InkWell(
-      onTap: () => Navigator.pop(context, code),
-      borderRadius: BorderRadius.circular(8),
+      onTap: () => _onBarcodeDetected(code),
+      borderRadius: BorderRadius.circular(6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: AppTheme.outlineVariantColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.qr_code_2_rounded, size: 14, color: AppTheme.primaryColor),
+            const Icon(Icons.qr_code_rounded, size: 12, color: AppTheme.primaryColor),
             const SizedBox(width: 4),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.primaryColor,
-              ),
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primaryColor),
             ),
           ],
         ),
@@ -316,11 +370,11 @@ class _ScannerReticlePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 3
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    const cornerLength = 20.0;
+    const cornerLength = 24.0;
 
     // Top-Left
     canvas.drawLine(const Offset(0, 0), const Offset(cornerLength, 0), paint);
