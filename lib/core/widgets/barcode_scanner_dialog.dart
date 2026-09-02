@@ -313,6 +313,29 @@ class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with Single
                   ),
                   const SizedBox(height: 10),
 
+                  // Botón Generar Código Automático para Productos sin Código (ej: Papa, Fruta a granel)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: const BorderSide(color: AppTheme.primaryColor, width: 1.2),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                      label: const Text(
+                        'Generar Código para Producto a Granel (ej: Papa)',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                      onPressed: () {
+                        final autoCode = '775${DateTime.now().millisecondsSinceEpoch.toString().substring(3)}';
+                        _onBarcodeDetected(autoCode);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
                   // Quick test mock chips
                   Wrap(
                     spacing: 6,
@@ -321,6 +344,7 @@ class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> with Single
                     children: [
                       _buildMockButton('Coca-Cola', '7501055310883'),
                       _buildMockButton('Galletas Oreo', '7501001156824'),
+                      _buildMockButton('Papa Amarilla (Kg)', '7759876543210'),
                       _buildMockButton('Crema Facial', '7751234567890'),
                     ],
                   ),

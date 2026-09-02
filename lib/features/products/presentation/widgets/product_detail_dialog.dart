@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/local_image_helper.dart';
@@ -265,8 +266,38 @@ class ProductDetailDialog extends ConsumerWidget {
                         product.description!,
                         style: const TextStyle(fontSize: 13, color: AppTheme.onSurfaceColor, height: 1.4),
                       ),
-                      const SizedBox(height: 16),
+                      // Código de Barras / SKU Visual
                     ],
+                    if (product.sku != null && product.sku!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.outlineVariantColor),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('CÓDIGO DE BARRAS / EAN:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.onSurfaceVariantColor)),
+                                Text(product.sku!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            BarcodeWidget(
+                              barcode: Barcode.code128(),
+                              data: product.sku!,
+                              height: 45,
+                              drawText: false,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
 
                     // Stock Stepper Bar
                     Row(

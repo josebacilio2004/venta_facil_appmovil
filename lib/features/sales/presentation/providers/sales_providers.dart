@@ -180,3 +180,5 @@ class CartNotifier extends StateNotifier<CartState> {
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   return CartNotifier();
 });
+
+final salesInitialTabProvider = StateProvider<int>((ref) => 0);

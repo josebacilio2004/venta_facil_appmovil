@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdf/pdf.dart';
@@ -15,17 +17,19 @@ import '../utils/receipt_formatter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/local_image_helper.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
-class ReceiptViewerDialog extends StatefulWidget {
+class ReceiptViewerDialog extends ConsumerStatefulWidget {
   final ReceiptData receipt;
 
   const ReceiptViewerDialog({required this.receipt, super.key});
 
   @override
-  State<ReceiptViewerDialog> createState() => _ReceiptViewerDialogState();
+  ConsumerState<ReceiptViewerDialog> createState() => _ReceiptViewerDialogState();
 }
 
-class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
+class _ReceiptViewerDialogState extends ConsumerState<ReceiptViewerDialog> {
   final GlobalKey _receiptKey = GlobalKey();
   late DocumentType _currentDocType;
   bool _isProcessing = false;
@@ -70,6 +74,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
   @override
   Widget build(BuildContext context) {
     final receipt = _activeReceipt;
+    final settings = ref.watch(settingsProvider);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -113,7 +118,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
                         ),
                         Text(
-                          'Impresión visual, imagen y envío por WhatsApp',
+                          'Impresión visual, galería y envío por WhatsApp',
                           style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
@@ -254,6 +259,21 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // Logo de la Empresa (si está configurado)
+                            if (settings.businessLogoPath.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LocalImageHelper.buildProductImage(
+                                    settings.businessLogoPath,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+
                             // Empresa Header
                             Text(
                               receipt.issuerName.toUpperCase(),
@@ -477,7 +497,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
               ),
             ),
 
-            // Action Toolbar (Imprimir Exacto, Guardar Imagen, Compartir WhatsApp)
+            // Action Toolbar (Imprimir Exacto, Guardar Imagen a Galería, Compartir WhatsApp)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
               child: Column(
@@ -521,7 +541,7 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // 3. Guardar Imagen
+                      // 3. Guardar en Galería de Fotos
                       Expanded(
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
@@ -531,8 +551,8 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: _isProcessing ? null : () => _saveReceiptImage(receipt),
-                          icon: const Icon(Icons.image_outlined, size: 17),
-                          label: const Text('Guardar Imagen', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                          icon: const Icon(Icons.photo_library_outlined, size: 17),
+                          label: const Text('Guardar en Galería', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -585,7 +605,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     );
   }
 
-  /// Captura el comprobante renderizado como imagen PNG en alta resolución (3.0x).
   Future<Uint8List?> _captureReceiptPng() async {
     try {
       final boundary = _receiptKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -599,7 +618,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     }
   }
 
-  /// Imprime el comprobante exactamente como se ve en la pantalla.
   Future<void> _printExactReceipt(ReceiptData receipt) async {
     setState(() => _isProcessing = true);
     try {
@@ -609,7 +627,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
       final pdf = pw.Document();
       final image = pw.MemoryImage(pngBytes);
 
-      // Creamos la página con el tamaño exacto del ticket para rollo térmico o estándar
       pdf.addPage(
         pw.Page(
           pageFormat: const PdfPageFormat(80 * PdfPageFormat.mm, double.infinity, marginAll: 2 * PdfPageFormat.mm),
@@ -636,7 +653,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     }
   }
 
-  /// Guarda la imagen del comprobante en el almacenamiento local.
   Future<void> _saveReceiptImage(ReceiptData receipt) async {
     setState(() => _isProcessing = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -645,21 +661,31 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
       if (pngBytes == null) throw Exception('No se pudo capturar la imagen.');
 
       if (kIsWeb) {
-        // En Web lo enviamos a imprimir / descargar
         await Printing.sharePdf(bytes: pngBytes, filename: 'Comprobante_${receipt.seriesNumber}.png');
       } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final filePath = p.join(dir.path, 'Comprobante_${receipt.seriesNumber}.png');
+        final tempDir = await getTemporaryDirectory();
+        final filePath = p.join(tempDir.path, 'Comprobante_${receipt.seriesNumber}.png');
         final file = File(filePath);
         await file.writeAsBytes(pngBytes);
 
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Comprobante guardado en: $filePath'),
-            backgroundColor: AppTheme.secondaryColor,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        try {
+          await Gal.putImage(file.path, album: 'VentaFacil');
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('✅ ¡Comprobante guardado con éxito en tu Galería de Fotos (Álbum VentaFacil)!'),
+              backgroundColor: AppTheme.secondaryColor,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        } catch (_) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Comprobante guardado en: $filePath'),
+              backgroundColor: AppTheme.secondaryColor,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -670,7 +696,6 @@ class _ReceiptViewerDialogState extends State<ReceiptViewerDialog> {
     }
   }
 
-  /// Comparte la imagen del comprobante por WhatsApp u otras aplicaciones.
   Future<void> _shareToWhatsApp(ReceiptData receipt) async {
     setState(() => _isProcessing = true);
     final messenger = ScaffoldMessenger.of(context);

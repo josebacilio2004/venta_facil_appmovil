@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../domain/entities/product.dart';
 import '../providers/products_providers.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/local_image_helper.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
@@ -30,6 +31,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   
   String? _imagePath;
   int? _selectedCategoryId;
+  String _unit = 'und';
   bool _isActive = true;
   bool _isSaving = false;
 
@@ -206,51 +208,118 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Unidad de Medida (Peso / Unidades)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
+                    flex: 5,
                     child: TextFormField(
                       controller: _stockController,
-                      decoration: const InputDecoration(labelText: 'Stock Inicial *'),
-                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Stock Inicial ($_unit) *',
+                        prefixIcon: const Icon(Icons.inventory_2_outlined, size: 20),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) return 'Requerido';
-                        if (int.tryParse(val) == null) return 'Inválido';
+                        if (double.tryParse(val) == null && int.tryParse(val) == null) return 'Inválido';
                         return null;
                       },
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: TextFormField(
-                      controller: _minStockController,
-                      decoration: const InputDecoration(labelText: 'Stock Mínimo'),
-                      keyboardType: TextInputType.number,
+                    flex: 4,
+                    child: DropdownButtonFormField<String>(
+                      value: _unit,
+                      decoration: const InputDecoration(labelText: 'Unidad'),
+                      items: const [
+                        DropdownMenuItem(value: 'und', child: Text('📦 Unid')),
+                        DropdownMenuItem(value: 'kg', child: Text('⚖️ Kg')),
+                        DropdownMenuItem(value: 'g', child: Text('⚖️ Gramos')),
+                        DropdownMenuItem(value: 'L', child: Text('🥛 Litros')),
+                        DropdownMenuItem(value: 'paq', child: Text('📦 Paq')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _unit = val);
+                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               TextFormField(
+                controller: _minStockController,
+                decoration: InputDecoration(labelText: 'Stock Mínimo de Alerta ($_unit)'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+
+              // Código / SKU con Generador Automático
+              TextFormField(
                 controller: _skuController,
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   labelText: 'Código / SKU / Barras',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor),
-                    tooltip: 'Escanear Código de Barras',
-                    onPressed: () async {
-                      final scanned = await showDialog<String>(
-                        context: context,
-                        builder: (ctx) => const BarcodeScannerDialog(title: 'Escanear SKU'),
-                      );
-                      if (scanned != null && scanned.isNotEmpty) {
-                        setState(() => _skuController.text = scanned);
-                      }
-                    },
+                  hintText: 'ej: 7750123456789',
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.auto_awesome_rounded, color: AppTheme.secondaryColor),
+                        tooltip: 'Generar Código Automático (ej: Papa a granel)',
+                        onPressed: () {
+                          final autoCode = '775${DateTime.now().millisecondsSinceEpoch.toString().substring(3)}';
+                          setState(() => _skuController.text = autoCode);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryColor),
+                        tooltip: 'Escanear con Cámara',
+                        onPressed: () async {
+                          final scanned = await showDialog<String>(
+                            context: context,
+                            builder: (ctx) => const BarcodeScannerDialog(title: 'Escanear SKU'),
+                          );
+                          if (scanned != null && scanned.isNotEmpty) {
+                            setState(() => _skuController.text = scanned);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
+
+              // Previsualización del Código de Barras generado
+              if (_skuController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.outlineVariantColor),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Código de Barras Generado:',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.onSurfaceVariantColor),
+                      ),
+                      const SizedBox(height: 4),
+                      BarcodeWidget(
+                        barcode: Barcode.code128(),
+                        data: _skuController.text.trim(),
+                        height: 40,
+                        drawText: true,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,

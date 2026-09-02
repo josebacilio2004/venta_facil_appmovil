@@ -34,6 +34,98 @@ class SettingsPage extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
               children: [
+                // Sección Logo de la Empresa
+                _buildSectionHeader('Logo del Negocio (Para Tickets y Comprobantes)'),
+                FintechCard(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.outlineVariantColor),
+                        ),
+                        child: settings.businessLogoPath.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: LocalImageHelper.buildProductImage(
+                                  settings.businessLogoPath,
+                                  width: 68,
+                                  height: 68,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(Icons.add_photo_alternate_outlined, color: AppTheme.outlineColor, size: 28),
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              settings.businessLogoPath.isNotEmpty ? 'Logo personalizado cargado' : 'Añade el logo de tu empresa',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.onSurfaceColor),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Aparecerá en la cabecera de tus boletas y tickets impresos.',
+                              style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariantColor),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.camera_alt_outlined, size: 14),
+                                  label: const Text('Cámara', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                  onPressed: () async {
+                                    final path = await LocalImageHelper.pickAndSaveImage(ImageSource.camera);
+                                    if (path != null) notifier.updateBusinessLogo(path);
+                                  },
+                                ),
+                                const SizedBox(width: 6),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.photo_library_outlined, size: 14),
+                                  label: const Text('Galería', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                  onPressed: () async {
+                                    final path = await LocalImageHelper.pickAndSaveImage(ImageSource.gallery);
+                                    if (path != null) notifier.updateBusinessLogo(path);
+                                  },
+                                ),
+                                if (settings.businessLogoPath.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 18),
+                                    tooltip: 'Quitar logo',
+                                    onPressed: () => notifier.updateBusinessLogo(''),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
                 _buildSectionHeader('Datos de la Empresa / Emisor SUNAT'),
                 FintechCard(
                   padding: EdgeInsets.zero,

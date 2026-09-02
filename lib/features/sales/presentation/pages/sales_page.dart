@@ -42,9 +42,12 @@ class _SalesPageState extends ConsumerState<SalesPage> {
     final productsFilter = ref.watch(productsFilterProvider);
     final productsAsync = ref.watch(productsListProvider);
     final salesAsync = ref.watch(salesListProvider);
+    final initialTab = ref.watch(salesInitialTabProvider);
 
     return DefaultTabController(
+      key: ValueKey(initialTab),
       length: 3,
+      initialIndex: initialTab,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(

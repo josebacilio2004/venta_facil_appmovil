@@ -13,6 +13,7 @@ class SettingsState {
   final String machineSeries;
   final String ticketSeries;
   final String boletaSeries;
+  final String businessLogoPath;
   final String yapeName;
   final String yapePhone;
   final String yapeQrPath;
@@ -28,6 +29,7 @@ class SettingsState {
     this.machineSeries = 'POS-VF2026-01',
     this.ticketSeries = 'T001',
     this.boletaSeries = 'B001',
+    this.businessLogoPath = '',
     this.yapeName = 'Comercial VentaFácil',
     this.yapePhone = '987654321',
     this.yapeQrPath = '',
@@ -44,6 +46,7 @@ class SettingsState {
     String? machineSeries,
     String? ticketSeries,
     String? boletaSeries,
+    String? businessLogoPath,
     String? yapeName,
     String? yapePhone,
     String? yapeQrPath,
@@ -59,6 +62,7 @@ class SettingsState {
       machineSeries: machineSeries ?? this.machineSeries,
       ticketSeries: ticketSeries ?? this.ticketSeries,
       boletaSeries: boletaSeries ?? this.boletaSeries,
+      businessLogoPath: businessLogoPath ?? this.businessLogoPath,
       yapeName: yapeName ?? this.yapeName,
       yapePhone: yapePhone ?? this.yapePhone,
       yapeQrPath: yapeQrPath ?? this.yapeQrPath,
@@ -89,6 +93,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       String machineSeries = 'POS-VF2026-01';
       String ticketSeries = 'T001';
       String boletaSeries = 'B001';
+      String businessLogoPath = '';
       String yapeName = 'Comercial VentaFácil';
       String yapePhone = '987654321';
       String yapeQrPath = '';
@@ -103,6 +108,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         if (s.key == 'machine_series') machineSeries = s.value;
         if (s.key == 'ticket_series') ticketSeries = s.value;
         if (s.key == 'boleta_series') boletaSeries = s.value;
+        if (s.key == 'business_logo_path') businessLogoPath = s.value;
         if (s.key == 'yape_name') yapeName = s.value;
         if (s.key == 'yape_phone') yapePhone = s.value;
         if (s.key == 'yape_qr_path') yapeQrPath = s.value;
@@ -118,6 +124,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         machineSeries: machineSeries,
         ticketSeries: ticketSeries,
         boletaSeries: boletaSeries,
+        businessLogoPath: businessLogoPath,
         yapeName: yapeName,
         yapePhone: yapePhone,
         yapeQrPath: yapeQrPath,
@@ -151,6 +158,14 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         AppSetting(key: 'boleta_series', value: boletaSeries),
       ]);
     });
+    await _loadSettings();
+  }
+
+  Future<void> updateBusinessLogo(String path) async {
+    state = state.copyWith(isLoading: true);
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+      AppSetting(key: 'business_logo_path', value: path),
+    );
     await _loadSettings();
   }
 
@@ -219,4 +234,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
 final settingsNotifierProvider = StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
   return SettingsNotifier(ref);
+});
+
+final settingsProvider = Provider<SettingsState>((ref) {
+  return ref.watch(settingsNotifierProvider);
 });

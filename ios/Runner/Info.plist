@@ -6,6 +6,8 @@
 	<string>VentaFácil requiere acceso a la cámara para escanear códigos de barras de productos y tomar fotos del inventario.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>VentaFácil requiere acceso a la galería para cargar fotos de productos y códigos QR de pago.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>VentaFácil requiere permiso para guardar los comprobantes y boletas como imágenes en tu galería de fotos.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
