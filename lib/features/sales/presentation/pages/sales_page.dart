@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/local_image_helper.dart';
 import '../../../../core/widgets/barcode_scanner_dialog.dart';
 import '../../../../core/widgets/fintech_card.dart';
 import '../../../products/presentation/providers/products_providers.dart';
@@ -180,13 +181,18 @@ class _SalesPageState extends ConsumerState<SalesPage> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.inventory_2_outlined, color: AppTheme.primaryColor, size: 22),
+            child: LocalImageHelper.buildProductImage(
+              p.imagePath,
+              width: 52,
+              height: 52,
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -270,6 +276,21 @@ class _SalesPageState extends ConsumerState<SalesPage> {
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
                   children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: LocalImageHelper.buildProductImage(
+                        item.product.imagePath,
+                        width: 48,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

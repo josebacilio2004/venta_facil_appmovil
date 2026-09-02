@@ -30,7 +30,8 @@ class DashboardStats {
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   final sales = await ref.watch(salesListProvider.future);
   final products = await ref.watch(productsListProvider.future);
-  final expenses = await ref.watch(expensesListProvider.future);
+  // Obtenemos todos los gastos sin filtro de categoría para calcular con precisión los gastos reales del día
+  final allExpenses = await ref.watch(getExpensesUseCaseProvider).call();
   
   final now = DateTime.now();
   final startOfToday = DateTime(now.year, now.month, now.day);
@@ -68,7 +69,7 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   }
 
   double todayExpenses = 0.0;
-  for (final e in expenses) {
+  for (final e in allExpenses) {
     if (e.date.isAfter(startOfToday)) {
       todayExpenses += e.amount;
     }
