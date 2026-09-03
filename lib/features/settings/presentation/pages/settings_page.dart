@@ -88,7 +88,7 @@ class SettingsPage extends ConsumerWidget {
                                   icon: const Icon(Icons.camera_alt_outlined, size: 14),
                                   label: const Text('Cámara', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                                   onPressed: () async {
-                                    final path = await LocalImageHelper.pickAndSaveImage(ImageSource.camera);
+                                    final path = await LocalImageHelper.pickAndSaveImage(source: ImageSource.camera);
                                     if (path != null) notifier.updateBusinessLogo(path);
                                   },
                                 ),
@@ -104,7 +104,7 @@ class SettingsPage extends ConsumerWidget {
                                   icon: const Icon(Icons.photo_library_outlined, size: 14),
                                   label: const Text('Galería', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                                   onPressed: () async {
-                                    final path = await LocalImageHelper.pickAndSaveImage(ImageSource.gallery);
+                                    final path = await LocalImageHelper.pickAndSaveImage(source: ImageSource.gallery);
                                     if (path != null) notifier.updateBusinessLogo(path);
                                   },
                                 ),

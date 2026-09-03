@@ -11,7 +11,7 @@ class LocalImageHelper {
   static final ImagePicker _picker = ImagePicker();
 
   /// Permite tomar foto con la cámara o elegir desde la galería y guardarla localmente.
-  static Future<String?> pickAndSaveImage({required ImageSource source}) async {
+  static Future<String?> pickAndSaveImage({ImageSource source = ImageSource.gallery}) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
