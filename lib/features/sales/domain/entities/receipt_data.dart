@@ -48,6 +48,8 @@ class ReceiptData {
   final double igvAmount;
   final double total;
   final String paymentMethod;
+  final double? cashReceived;
+  final double? changeGiven;
   final String currency;
 
   const ReceiptData({
@@ -71,6 +73,8 @@ class ReceiptData {
     required this.igvAmount,
     required this.total,
     required this.paymentMethod,
+    this.cashReceived,
+    this.changeGiven,
     this.currency = 'S/.',
   });
 

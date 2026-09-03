@@ -80,8 +80,14 @@ class ReceiptFormatter {
     buffer.writeln(row('TOTAL A PAGAR:', CurrencyFormatter.format(receipt.total)));
     buffer.writeln(divider('='));
 
-    // Footer
+    // Footer & Payment Details
     buffer.writeln(row('FORMA DE PAGO:', receipt.paymentMethod.toUpperCase()));
+    if (receipt.cashReceived != null && receipt.cashReceived! > 0) {
+      buffer.writeln(row('EFECTIVO RECIBIDO:', CurrencyFormatter.format(receipt.cashReceived!)));
+      if (receipt.changeGiven != null) {
+        buffer.writeln(row('VUELTO / CAMBIO:', CurrencyFormatter.format(receipt.changeGiven!)));
+      }
+    }
     buffer.writeln(divider('-'));
     if (receipt.documentType == DocumentType.boleta) {
       buffer.writeln(center('Representación impresa de la'));

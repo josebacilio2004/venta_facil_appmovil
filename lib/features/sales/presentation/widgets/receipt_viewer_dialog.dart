@@ -67,6 +67,8 @@ class _ReceiptViewerDialogState extends ConsumerState<ReceiptViewerDialog> {
       igvAmount: widget.receipt.igvAmount,
       total: widget.receipt.total,
       paymentMethod: widget.receipt.paymentMethod,
+      cashReceived: widget.receipt.cashReceived,
+      changeGiven: widget.receipt.changeGiven,
       currency: widget.receipt.currency,
     );
   }
@@ -439,6 +441,20 @@ class _ReceiptViewerDialogState extends ConsumerState<ReceiptViewerDialog> {
                               ],
                             ),
 
+                            if (receipt.cashReceived != null && receipt.cashReceived! > 0) ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 4.0),
+                                child: _DashedDivider(),
+                              ),
+                              _buildReceiptRow('Efectivo Recibido:', CurrencyFormatter.format(receipt.cashReceived!)),
+                              if (receipt.changeGiven != null)
+                                _buildReceiptRow(
+                                  'Vuelto / Cambio:',
+                                  CurrencyFormatter.format(receipt.changeGiven!),
+                                  isHighlight: true,
+                                ),
+                            ],
+
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 10.0),
                               child: _DashedDivider(),
@@ -582,21 +598,28 @@ class _ReceiptViewerDialogState extends ConsumerState<ReceiptViewerDialog> {
     );
   }
 
-  Widget _buildReceiptRow(String label, String value, {bool isDiscount = false}) {
+  Widget _buildReceiptRow(String label, String value, {bool isDiscount = false, bool isHighlight = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariantColor, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isHighlight ? AppTheme.primaryColor : AppTheme.onSurfaceVariantColor,
+              fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w500,
+            ),
+          ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: isHighlight ? 13 : 11,
                 fontWeight: FontWeight.w800,
-                color: isDiscount ? AppTheme.errorColor : AppTheme.onSurfaceColor,
+                color: isDiscount ? AppTheme.errorColor : (isHighlight ? AppTheme.primaryColor : AppTheme.onSurfaceColor),
               ),
             ),
           ),
